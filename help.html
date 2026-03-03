@@ -6255,7 +6255,7 @@ the same order as listed in saOutputOrder.</p>
 </tr>
 <tr class="row-even"><td><p>Description</p></td>
 <td><div class="line-block">
-<div class="line">Diagnostic FXUV threshold 1</div>
+<div class="line">Diagnostic FXUV threshold 1 (&lt;0 disables output, sentinel=-1)</div>
 </div>
 </td>
 </tr>
@@ -6285,7 +6285,7 @@ the same order as listed in saOutputOrder.</p>
 </tr>
 <tr class="row-odd"><td><p>Default value</p></td>
 <td><div class="line-block">
-<div class="line">0</div>
+<div class="line">-1</div>
 </div>
 </td>
 </tr>
@@ -6297,7 +6297,7 @@ the same order as listed in saOutputOrder.</p>
 </tr>
 <tr class="row-even"><td><p>Description</p></td>
 <td><div class="line-block">
-<div class="line">Diagnostic FXUV threshold 2</div>
+<div class="line">Diagnostic FXUV threshold 2 (&lt;0 disables output, sentinel=-1)</div>
 </div>
 </td>
 </tr>
@@ -6327,7 +6327,7 @@ the same order as listed in saOutputOrder.</p>
 </tr>
 <tr class="row-odd"><td><p>Default value</p></td>
 <td><div class="line-block">
-<div class="line">0</div>
+<div class="line">-1</div>
 </div>
 </td>
 </tr>
@@ -17925,6 +17925,46 @@ the same order as listed in saOutputOrder.</p>
 </table>
 <table class="docutils align-default">
 <thead>
+<tr class="row-odd"><th class="head" colspan="2"><p><strong>FlareBinPFXUVAbove1</strong></p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Description</p></td>
+<td><div class="line-block">
+<div class="line">P(FXUV &gt; dFlareBinFXUVThresh1); -1 when threshold &lt; 0</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p>Modules</p></td>
+<td><div class="line-block">
+<div class="line">FLAREBIN</div>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head" colspan="2"><p><strong>FlareBinPFXUVAbove2</strong></p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Description</p></td>
+<td><div class="line-block">
+<div class="line">P(FXUV &gt; dFlareBinFXUVThresh2); -1 when threshold &lt; 0</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p>Modules</p></td>
+<td><div class="line-block">
+<div class="line">FLAREBIN</div>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+<table class="docutils align-default">
+<thead>
 <tr class="row-odd"><th class="head" colspan="2"><p><strong>FlareBinPStoch</strong></p></th>
 </tr>
 </thead>
@@ -18589,6 +18629,58 @@ the same order as listed in saOutputOrder.</p>
 <tr class="row-even"><td><p>Modules</p></td>
 <td><div class="line-block">
 <div class="line">AtmEsc</div>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head" colspan="2"><p><strong>FXUVMean</strong></p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Description</p></td>
+<td><div class="line-block">
+<div class="line">Planet mean XUV flux convenience output (matches FXUV)</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p>Custom unit</p></td>
+<td><div class="line-block">
+<div class="line">W/m^2</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p>Modules</p></td>
+<td><div class="line-block">
+<div class="line">FLAREBIN</div>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head" colspan="2"><p><strong>FXUVQuiescent</strong></p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Description</p></td>
+<td><div class="line-block">
+<div class="line">Planet quiescent XUV flux L_q/(4 pi a^2)</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p>Custom unit</p></td>
+<td><div class="line-block">
+<div class="line">W/m^2</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p>Modules</p></td>
+<td><div class="line-block">
+<div class="line">FLAREBIN</div>
 </div>
 </td>
 </tr>
