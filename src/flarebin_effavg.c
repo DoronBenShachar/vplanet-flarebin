@@ -148,3 +148,74 @@ int fiFlareBinDebugVerifyGaussLegendre(void) {
   return fiFlareBinGaussLegendreVerify();
 }
 #endif
+
+void fvFlareBinPrecompute(BODY *body, SYSTEM *system, int iStar,
+                          double dTimeEval) {
+  int i, iNE;
+  double dLbar, dLQ, dPStoch, dMu;
+  double dNegTol;
+  double dConsTol = 1e-10;
+
+  (void)system;
+
+  if (!body[iStar].bFlareBin) {
+    return;
+  }
+
+  /* Deterministic cache short-circuit for repeated calls at identical t_eval. */
+  if (body[iStar].dFlareBinLastPrecomputeAge == dTimeEval) {
+    return;
+  }
+
+  iNE = body[iStar].iFlareBinNEnergy;
+  if (iNE <= 0 || body[iStar].daFlareBinQuadE == NULL ||
+      body[iStar].daFlareBinQuadWE == NULL) {
+    fprintf(stderr,
+            "ERROR: FLAREBIN precompute cache missing for body %d.\n",
+            iStar);
+    exit(EXIT_FAILURE);
+  }
+
+  fvFlareBinNormalizeFfd(body, iStar);
+
+  dPStoch = 0;
+  dMu     = 0;
+  for (i = 0; i < iNE; i++) {
+    double dE  = body[iStar].daFlareBinQuadE[i];
+    double dWE = body[iStar].daFlareBinQuadWE[i];
+
+    dPStoch += dWE * fdFlareBinPowerIntegrand(body, iStar, dE, dTimeEval);
+    dMu += dWE *
+           fdFlareBinOverlapSupportIntegrand(body, iStar, dE, dTimeEval);
+  }
+
+  dLbar = body[iStar].dLXUV;
+  dLQ   = dLbar - dPStoch;
+
+  dNegTol = dConsTol * (1.0 + fabs(dLbar));
+  if (dLQ < -dNegTol) {
+    fprintf(stderr,
+            "ERROR: FLAREBIN invalid configuration on body %d: "
+            "L_q = %.16e < 0 (Lbar=%.16e, P_stoch=%.16e).\n",
+            iStar, dLQ, dLbar, dPStoch);
+    exit(EXIT_FAILURE);
+  }
+  if (dLQ < 0) {
+    dLQ = 0;
+  }
+
+  body[iStar].dFlareBinPStoch            = dPStoch;
+  body[iStar].dFlareBinLQ                = dLQ;
+  body[iStar].dFlareBinMu                = dMu;
+  body[iStar].dFlareBinLastPrecomputeAge = dTimeEval;
+
+#ifdef DEBUG
+  if (fabs((body[iStar].dFlareBinLQ + body[iStar].dFlareBinPStoch) - dLbar) >
+      dConsTol * (1.0 + fabs(dLbar))) {
+    fprintf(stderr,
+            "ERROR: FLAREBIN energy consistency check failed on body %d.\n",
+            iStar);
+    abort();
+  }
+#endif
+}
