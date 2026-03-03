@@ -63,25 +63,833 @@ void BodyCopyFlareBin(BODY *dest, BODY *src, int foo, int iNumBodies,
   dest[iBody].daFlareBinTplAtX = src[iBody].daFlareBinTplAtX;
 }
 
+static void fvFlareBinOptionError(CONTROL *control, FILES *files, OPTIONS *options,
+                                  int iFile, int iLine, const char *cMsg) {
+  if (control->Io.iVerbose >= VERBERR) {
+    fprintf(stderr, "ERROR: %s %s\n", options->cName, cMsg);
+  }
+  if (iLine < 0) {
+    iLine = 0;
+  }
+  LineExit(files->Infile[iFile].cIn, iLine);
+}
+
+static int fbReadFlareBinInt(CONTROL *control, FILES *files, OPTIONS *options,
+                             int iFile, int *piValue) {
+  int lTmp = -1;
+  int iTmp;
+
+  AddOptionInt(files->Infile[iFile].cIn, options->cName, &iTmp, &lTmp,
+               control->Io.iVerbose);
+
+  if (lTmp >= 0) {
+    NotPrimaryInput(iFile, options->cName, files->Infile[iFile].cIn, lTmp,
+                    control->Io.iVerbose);
+    *piValue = iTmp;
+    UpdateFoundOption(&files->Infile[iFile], options, lTmp, iFile);
+    return 1;
+  }
+
+  if (iFile > 0) {
+    *piValue = (int)options->dDefault;
+  }
+  return 0;
+}
+
+static int fbReadFlareBinDouble(CONTROL *control, FILES *files,
+                                OPTIONS *options, int iFile, double *pdValue) {
+  int lTmp = -1;
+  double dTmp;
+
+  AddOptionDouble(files->Infile[iFile].cIn, options->cName, &dTmp, &lTmp,
+                  control->Io.iVerbose);
+
+  if (lTmp >= 0) {
+    NotPrimaryInput(iFile, options->cName, files->Infile[iFile].cIn, lTmp,
+                    control->Io.iVerbose);
+    *pdValue = dTmp;
+    UpdateFoundOption(&files->Infile[iFile], options, lTmp, iFile);
+    return 1;
+  }
+
+  if (iFile > 0) {
+    *pdValue = options->dDefault;
+  }
+  return 0;
+}
+
+static int fbReadFlareBinString(CONTROL *control, FILES *files, OPTIONS *options,
+                                int iFile, char cTmp[OPTLEN], int *piLine) {
+  AddOptionString(files->Infile[iFile].cIn, options->cName, cTmp, piLine,
+                  control->Io.iVerbose);
+
+  if (*piLine >= 0) {
+    NotPrimaryInput(iFile, options->cName, files->Infile[iFile].cIn, *piLine,
+                    control->Io.iVerbose);
+    return 1;
+  }
+  return 0;
+}
+
+void ReadFlareBinSeed(BODY *body, CONTROL *control, FILES *files,
+                      OPTIONS *options, SYSTEM *system, int iFile) {
+  int iBody = iFile - 1;
+
+  (void)system;
+  fbReadFlareBinInt(control, files, options, iFile,
+                    &body[iBody].iFlareBinSeed);
+
+  if (body[iBody].iFlareBinSeed < 0) {
+    fvFlareBinOptionError(control, files, options, iFile, options->iLine[iFile],
+                          "must be >= 0.");
+  }
+}
+
+void ReadFlareBinQuadNE(BODY *body, CONTROL *control, FILES *files,
+                        OPTIONS *options, SYSTEM *system, int iFile) {
+  int iBody = iFile - 1;
+
+  (void)system;
+  fbReadFlareBinInt(control, files, options, iFile,
+                    &body[iBody].iFlareBinQuadNE);
+
+  if (body[iBody].iFlareBinQuadNE < 1) {
+    fvFlareBinOptionError(control, files, options, iFile, options->iLine[iFile],
+                          "must be >= 1.");
+  }
+}
+
+void ReadFlareBinQuadNX(BODY *body, CONTROL *control, FILES *files,
+                        OPTIONS *options, SYSTEM *system, int iFile) {
+  int iBody = iFile - 1;
+
+  (void)system;
+  fbReadFlareBinInt(control, files, options, iFile,
+                    &body[iBody].iFlareBinQuadNX);
+
+  if (body[iBody].iFlareBinQuadNX < 1) {
+    fvFlareBinOptionError(control, files, options, iFile, options->iLine[iFile],
+                          "must be >= 1.");
+  }
+}
+
+void ReadFlareBinMaxOverlapN(BODY *body, CONTROL *control, FILES *files,
+                             OPTIONS *options, SYSTEM *system, int iFile) {
+  int iBody = iFile - 1;
+
+  (void)system;
+  fbReadFlareBinInt(control, files, options, iFile,
+                    &body[iBody].iFlareBinMaxOverlapN);
+
+  if (body[iBody].iFlareBinMaxOverlapN < 0 ||
+      body[iBody].iFlareBinMaxOverlapN > 2) {
+    fvFlareBinOptionError(control, files, options, iFile, options->iLine[iFile],
+                          "must be in [0,2].");
+  }
+}
+
+void ReadFlareBinOverlapTol(BODY *body, CONTROL *control, FILES *files,
+                            OPTIONS *options, SYSTEM *system, int iFile) {
+  int iBody = iFile - 1;
+
+  (void)system;
+  fbReadFlareBinDouble(control, files, options, iFile,
+                       &body[iBody].dFlareBinOverlapTol);
+
+  if (body[iBody].dFlareBinOverlapTol < 0) {
+    fvFlareBinOptionError(control, files, options, iFile, options->iLine[iFile],
+                          "must be >= 0.");
+  }
+}
+
+void ReadFlareBinDist(BODY *body, CONTROL *control, FILES *files,
+                      OPTIONS *options, SYSTEM *system, int iFile) {
+  int lTmp = -1;
+  int iBody = iFile - 1;
+  char cTmp[OPTLEN];
+
+  (void)system;
+  if (fbReadFlareBinString(control, files, options, iFile, cTmp, &lTmp)) {
+    if (!memcmp(sLower(cTmp), "po", 2)) {
+      body[iBody].iFlareBinDist = FLAREBIN_DIST_POWERLAW;
+    } else if (!memcmp(sLower(cTmp), "lo", 2)) {
+      body[iBody].iFlareBinDist = FLAREBIN_DIST_LOGNORMAL;
+    } else {
+      fvFlareBinOptionError(control, files, options, iFile, lTmp,
+                            "must be POWERLAW_FFD or LOGNORMAL.");
+    }
+    UpdateFoundOption(&files->Infile[iFile], options, lTmp, iFile);
+  } else if (iFile > 0) {
+    body[iBody].iFlareBinDist = (int)options->dDefault;
+  }
+}
+
+void ReadFlareBinNormMode(BODY *body, CONTROL *control, FILES *files,
+                          OPTIONS *options, SYSTEM *system, int iFile) {
+  int lTmp = -1;
+  int iBody = iFile - 1;
+  char cTmp[OPTLEN];
+  char *cLow;
+
+  (void)system;
+  if (fbReadFlareBinString(control, files, options, iFile, cTmp, &lTmp)) {
+    cLow = sLower(cTmp);
+    if (!memcmp(cLow, "ffd", 3) || strstr(cLow, "from_ffd") != NULL) {
+      body[iBody].iFlareBinNormMode = FLAREBIN_NORM_FROM_FFD;
+    } else if (strstr(cLow, "flarepower") != NULL || strstr(cLow, "fraction") != NULL) {
+      body[iBody].iFlareBinNormMode = FLAREBIN_NORM_FROM_FLAREPOWER_FRACTION;
+    } else if (strstr(cLow, "rate") != NULL) {
+      body[iBody].iFlareBinNormMode = FLAREBIN_NORM_FROM_RATE_AT_E0;
+    } else {
+      fvFlareBinOptionError(control, files, options, iFile, lTmp,
+                            "must be NORM_FROM_FFD, NORM_FROM_FLAREPOWER_FRACTION, or NORM_FROM_RATE_AT_E0.");
+    }
+    UpdateFoundOption(&files->Infile[iFile], options, lTmp, iFile);
+  } else if (iFile > 0) {
+    body[iBody].iFlareBinNormMode = (int)options->dDefault;
+  }
+}
+
+void ReadFlareBinFrac(BODY *body, CONTROL *control, FILES *files,
+                      OPTIONS *options, SYSTEM *system, int iFile) {
+  int iBody = iFile - 1;
+
+  (void)system;
+  fbReadFlareBinDouble(control, files, options, iFile,
+                       &body[iBody].dFlareBinFrac);
+
+  if (body[iBody].dFlareBinFrac < 0) {
+    fvFlareBinOptionError(control, files, options, iFile, options->iLine[iFile],
+                          "must be >= 0.");
+  }
+}
+
+void ReadFlareBinBandPass(BODY *body, CONTROL *control, FILES *files,
+                          OPTIONS *options, SYSTEM *system, int iFile) {
+  int lTmp = -1;
+  int iBody = iFile - 1;
+  char cTmp[OPTLEN];
+
+  (void)system;
+  if (fbReadFlareBinString(control, files, options, iFile, cTmp, &lTmp)) {
+    if (!memcmp(sLower(cTmp), "xu", 2)) {
+      body[iBody].iFlareBinBandPass = FLAREBIN_BANDPASS_XUV;
+    } else if (!memcmp(sLower(cTmp), "ke", 2)) {
+      body[iBody].iFlareBinBandPass = FLAREBIN_BANDPASS_KEPLER;
+    } else if (!memcmp(sLower(cTmp), "te", 2)) {
+      body[iBody].iFlareBinBandPass = FLAREBIN_BANDPASS_TESS;
+    } else if (!memcmp(sLower(cTmp), "bo", 2)) {
+      body[iBody].iFlareBinBandPass = FLAREBIN_BANDPASS_BOLOMETRIC;
+    } else {
+      fvFlareBinOptionError(control, files, options, iFile, lTmp,
+                            "must be XUV, KEPLER, TESS, or BOLOMETRIC.");
+    }
+    UpdateFoundOption(&files->Infile[iFile], options, lTmp, iFile);
+  } else if (iFile > 0) {
+    body[iBody].iFlareBinBandPass = (int)options->dDefault;
+  }
+}
+
+void ReadFlareBinEmin(BODY *body, CONTROL *control, FILES *files,
+                      OPTIONS *options, SYSTEM *system, int iFile) {
+  int iBody = iFile - 1;
+
+  (void)system;
+  fbReadFlareBinDouble(control, files, options, iFile,
+                       &body[iBody].dFlareBinEmin);
+
+  if (body[iBody].dFlareBinEmin < 0) {
+    fvFlareBinOptionError(control, files, options, iFile, options->iLine[iFile],
+                          "must be >= 0.");
+  }
+}
+
+void ReadFlareBinEmax(BODY *body, CONTROL *control, FILES *files,
+                      OPTIONS *options, SYSTEM *system, int iFile) {
+  int iBody = iFile - 1;
+
+  (void)system;
+  fbReadFlareBinDouble(control, files, options, iFile,
+                       &body[iBody].dFlareBinEmax);
+
+  if (body[iBody].dFlareBinEmax < 0) {
+    fvFlareBinOptionError(control, files, options, iFile, options->iLine[iFile],
+                          "must be >= 0.");
+  }
+}
+
+void ReadFlareBinEStochMin(BODY *body, CONTROL *control, FILES *files,
+                           OPTIONS *options, SYSTEM *system, int iFile) {
+  int iBody = iFile - 1;
+
+  (void)system;
+  fbReadFlareBinDouble(control, files, options, iFile,
+                       &body[iBody].dFlareBinEStochMin);
+
+  if (body[iBody].dFlareBinEStochMin < 0) {
+    fvFlareBinOptionError(control, files, options, iFile, options->iLine[iFile],
+                          "must be >= 0.");
+  }
+}
+
+void ReadFlareBinAlpha(BODY *body, CONTROL *control, FILES *files,
+                       OPTIONS *options, SYSTEM *system, int iFile) {
+  int iBody = iFile - 1;
+
+  (void)system;
+  fbReadFlareBinDouble(control, files, options, iFile,
+                       &body[iBody].dFlareBinAlpha);
+
+  if (body[iBody].dFlareBinAlpha < 0) {
+    fvFlareBinOptionError(control, files, options, iFile, options->iLine[iFile],
+                          "must be >= 0.");
+  }
+}
+
+void ReadFlareBinK(BODY *body, CONTROL *control, FILES *files, OPTIONS *options,
+                   SYSTEM *system, int iFile) {
+  int iBody = iFile - 1;
+
+  (void)system;
+  fbReadFlareBinDouble(control, files, options, iFile,
+                       &body[iBody].dFlareBinK);
+
+  if (body[iBody].dFlareBinK < 0) {
+    fvFlareBinOptionError(control, files, options, iFile, options->iLine[iFile],
+                          "must be >= 0.");
+  }
+}
+
+void ReadFlareBinSlope(BODY *body, CONTROL *control, FILES *files,
+                       OPTIONS *options, SYSTEM *system, int iFile) {
+  int iBody = iFile - 1;
+
+  (void)system;
+  fbReadFlareBinDouble(control, files, options, iFile,
+                       &body[iBody].dFlareBinSlope);
+}
+
+void ReadFlareBinYInt(BODY *body, CONTROL *control, FILES *files,
+                      OPTIONS *options, SYSTEM *system, int iFile) {
+  int iBody = iFile - 1;
+
+  (void)system;
+  fbReadFlareBinDouble(control, files, options, iFile,
+                       &body[iBody].dFlareBinYInt);
+}
+
+void ReadFlareBinLogMu(BODY *body, CONTROL *control, FILES *files,
+                       OPTIONS *options, SYSTEM *system, int iFile) {
+  int iBody = iFile - 1;
+
+  (void)system;
+  fbReadFlareBinDouble(control, files, options, iFile,
+                       &body[iBody].dFlareBinLogMu);
+}
+
+void ReadFlareBinLogSigma(BODY *body, CONTROL *control, FILES *files,
+                          OPTIONS *options, SYSTEM *system, int iFile) {
+  int iBody = iFile - 1;
+
+  (void)system;
+  fbReadFlareBinDouble(control, files, options, iFile,
+                       &body[iBody].dFlareBinLogSigma);
+
+  if (body[iBody].dFlareBinLogSigma < 0) {
+    fvFlareBinOptionError(control, files, options, iFile, options->iLine[iFile],
+                          "must be >= 0.");
+  }
+}
+
+void ReadFlareBinRateTot(BODY *body, CONTROL *control, FILES *files,
+                         OPTIONS *options, SYSTEM *system, int iFile) {
+  int iBody = iFile - 1;
+
+  (void)system;
+  fbReadFlareBinDouble(control, files, options, iFile,
+                       &body[iBody].dFlareBinRateTot);
+
+  if (body[iBody].dFlareBinRateTot < 0) {
+    fvFlareBinOptionError(control, files, options, iFile, options->iLine[iFile],
+                          "must be >= 0.");
+  }
+}
+
+void ReadFlareBinTau0(BODY *body, CONTROL *control, FILES *files,
+                      OPTIONS *options, SYSTEM *system, int iFile) {
+  int iBody = iFile - 1;
+
+  (void)system;
+  fbReadFlareBinDouble(control, files, options, iFile,
+                       &body[iBody].dFlareBinTau0);
+
+  if (body[iBody].dFlareBinTau0 < 0) {
+    fvFlareBinOptionError(control, files, options, iFile, options->iLine[iFile],
+                          "must be >= 0.");
+  }
+}
+
+void ReadFlareBinDurE0(BODY *body, CONTROL *control, FILES *files,
+                       OPTIONS *options, SYSTEM *system, int iFile) {
+  int iBody = iFile - 1;
+
+  (void)system;
+  fbReadFlareBinDouble(control, files, options, iFile,
+                       &body[iBody].dFlareBinDurE0);
+
+  if (body[iBody].dFlareBinDurE0 < 0) {
+    fvFlareBinOptionError(control, files, options, iFile, options->iLine[iFile],
+                          "must be >= 0.");
+  }
+}
+
+void ReadFlareBinDurExp(BODY *body, CONTROL *control, FILES *files,
+                        OPTIONS *options, SYSTEM *system, int iFile) {
+  int iBody = iFile - 1;
+
+  (void)system;
+  fbReadFlareBinDouble(control, files, options, iFile,
+                       &body[iBody].dFlareBinDurExp);
+}
+
+void ReadFlareBinXMin(BODY *body, CONTROL *control, FILES *files,
+                      OPTIONS *options, SYSTEM *system, int iFile) {
+  int iBody = iFile - 1;
+
+  (void)system;
+  fbReadFlareBinDouble(control, files, options, iFile,
+                       &body[iBody].dFlareBinXMin);
+}
+
+void ReadFlareBinXEnd(BODY *body, CONTROL *control, FILES *files,
+                      OPTIONS *options, SYSTEM *system, int iFile) {
+  int iBody = iFile - 1;
+
+  (void)system;
+  fbReadFlareBinDouble(control, files, options, iFile,
+                       &body[iBody].dFlareBinXEnd);
+}
+
+void ReadFlareBinBandC(BODY *body, CONTROL *control, FILES *files,
+                       OPTIONS *options, SYSTEM *system, int iFile) {
+  int iBody = iFile - 1;
+
+  (void)system;
+  fbReadFlareBinDouble(control, files, options, iFile,
+                       &body[iBody].dFlareBinBandC);
+
+  if (body[iBody].dFlareBinBandC < 0) {
+    fvFlareBinOptionError(control, files, options, iFile, options->iLine[iFile],
+                          "must be >= 0.");
+  }
+}
+
+void ReadFlareBinBandP(BODY *body, CONTROL *control, FILES *files,
+                       OPTIONS *options, SYSTEM *system, int iFile) {
+  int iBody = iFile - 1;
+
+  (void)system;
+  fbReadFlareBinDouble(control, files, options, iFile,
+                       &body[iBody].dFlareBinBandP);
+
+  if (body[iBody].dFlareBinBandP < 0) {
+    fvFlareBinOptionError(control, files, options, iFile, options->iLine[iFile],
+                          "must be >= 0.");
+  }
+}
+
+void ReadFlareBinFXUVThresh1(BODY *body, CONTROL *control, FILES *files,
+                             OPTIONS *options, SYSTEM *system, int iFile) {
+  int iBody = iFile - 1;
+
+  (void)system;
+  fbReadFlareBinDouble(control, files, options, iFile,
+                       &body[iBody].dFlareBinFXUVThresh1);
+
+  if (body[iBody].dFlareBinFXUVThresh1 < 0) {
+    fvFlareBinOptionError(control, files, options, iFile, options->iLine[iFile],
+                          "must be >= 0.");
+  }
+}
+
+void ReadFlareBinFXUVThresh2(BODY *body, CONTROL *control, FILES *files,
+                             OPTIONS *options, SYSTEM *system, int iFile) {
+  int iBody = iFile - 1;
+
+  (void)system;
+  fbReadFlareBinDouble(control, files, options, iFile,
+                       &body[iBody].dFlareBinFXUVThresh2);
+
+  if (body[iBody].dFlareBinFXUVThresh2 < 0) {
+    fvFlareBinOptionError(control, files, options, iFile, options->iLine[iFile],
+                          "must be >= 0.");
+  }
+}
+
 void InitializeOptionsFlareBin(OPTIONS *options, fnReadOption fnRead[]) {
-  (void)options;
-  (void)fnRead;
+  fvFormattedString(&options[OPT_FLAREBINSEED].cName, "iFlareBinSeed");
+  fvFormattedString(&options[OPT_FLAREBINSEED].cDescr, "Flarebin validation seed");
+  fvFormattedString(&options[OPT_FLAREBINSEED].cDefault, "0");
+  fvFormattedString(&options[OPT_FLAREBINSEED].cDimension, "none");
+  options[OPT_FLAREBINSEED].dDefault   = 0;
+  options[OPT_FLAREBINSEED].iType      = 1;
+  options[OPT_FLAREBINSEED].bMultiFile = 1;
+  options[OPT_FLAREBINSEED].iModuleBit = FLAREBIN;
+  options[OPT_FLAREBINSEED].iFileType  = 1;
+  fnRead[OPT_FLAREBINSEED]             = &ReadFlareBinSeed;
+
+  fvFormattedString(&options[OPT_FLAREBINQUADNE].cName, "iFlareBinQuadNE");
+  fvFormattedString(&options[OPT_FLAREBINQUADNE].cDescr, "Log-energy quadrature nodes");
+  fvFormattedString(&options[OPT_FLAREBINQUADNE].cDefault, "24");
+  fvFormattedString(&options[OPT_FLAREBINQUADNE].cDimension, "none");
+  options[OPT_FLAREBINQUADNE].dDefault   = 24;
+  options[OPT_FLAREBINQUADNE].iType      = 1;
+  options[OPT_FLAREBINQUADNE].bMultiFile = 1;
+  options[OPT_FLAREBINQUADNE].iModuleBit = FLAREBIN;
+  options[OPT_FLAREBINQUADNE].iFileType  = 1;
+  fnRead[OPT_FLAREBINQUADNE]             = &ReadFlareBinQuadNE;
+
+  fvFormattedString(&options[OPT_FLAREBINQUADNX].cName, "iFlareBinQuadNX");
+  fvFormattedString(&options[OPT_FLAREBINQUADNX].cDescr, "Phase quadrature nodes");
+  fvFormattedString(&options[OPT_FLAREBINQUADNX].cDefault, "16");
+  fvFormattedString(&options[OPT_FLAREBINQUADNX].cDimension, "none");
+  options[OPT_FLAREBINQUADNX].dDefault   = 16;
+  options[OPT_FLAREBINQUADNX].iType      = 1;
+  options[OPT_FLAREBINQUADNX].bMultiFile = 1;
+  options[OPT_FLAREBINQUADNX].iModuleBit = FLAREBIN;
+  options[OPT_FLAREBINQUADNX].iFileType  = 1;
+  fnRead[OPT_FLAREBINQUADNX]             = &ReadFlareBinQuadNX;
+
+  fvFormattedString(&options[OPT_FLAREBINMAXOVERLAPN].cName, "iFlareBinMaxOverlapN");
+  fvFormattedString(&options[OPT_FLAREBINMAXOVERLAPN].cDescr, "Maximum overlap order");
+  fvFormattedString(&options[OPT_FLAREBINMAXOVERLAPN].cDefault, "1");
+  fvFormattedString(&options[OPT_FLAREBINMAXOVERLAPN].cValues, "0 1 2");
+  fvFormattedString(&options[OPT_FLAREBINMAXOVERLAPN].cDimension, "none");
+  options[OPT_FLAREBINMAXOVERLAPN].dDefault   = 1;
+  options[OPT_FLAREBINMAXOVERLAPN].iType      = 1;
+  options[OPT_FLAREBINMAXOVERLAPN].bMultiFile = 1;
+  options[OPT_FLAREBINMAXOVERLAPN].iModuleBit = FLAREBIN;
+  options[OPT_FLAREBINMAXOVERLAPN].iFileType  = 1;
+  fnRead[OPT_FLAREBINMAXOVERLAPN]             = &ReadFlareBinMaxOverlapN;
+
+  fvFormattedString(&options[OPT_FLAREBINOVERLAPTOL].cName, "dFlareBinOverlapTol");
+  fvFormattedString(&options[OPT_FLAREBINOVERLAPTOL].cDescr, "Neglected overlap probability tolerance");
+  fvFormattedString(&options[OPT_FLAREBINOVERLAPTOL].cDefault, "1e-6");
+  fvFormattedString(&options[OPT_FLAREBINOVERLAPTOL].cDimension, "none");
+  options[OPT_FLAREBINOVERLAPTOL].dDefault   = 1e-6;
+  options[OPT_FLAREBINOVERLAPTOL].iType      = 2;
+  options[OPT_FLAREBINOVERLAPTOL].bMultiFile = 1;
+  options[OPT_FLAREBINOVERLAPTOL].iModuleBit = FLAREBIN;
+  options[OPT_FLAREBINOVERLAPTOL].iFileType  = 1;
+  fnRead[OPT_FLAREBINOVERLAPTOL]             = &ReadFlareBinOverlapTol;
+
+  fvFormattedString(&options[OPT_FLAREBINDIST].cName, "sFlareBinDist");
+  fvFormattedString(&options[OPT_FLAREBINDIST].cDescr, "Flare population distribution");
+  fvFormattedString(&options[OPT_FLAREBINDIST].cDefault, "POWERLAW_FFD");
+  fvFormattedString(&options[OPT_FLAREBINDIST].cValues, "POWERLAW_FFD LOGNORMAL");
+  fvFormattedString(&options[OPT_FLAREBINDIST].cDimension, "none");
+  options[OPT_FLAREBINDIST].dDefault   = FLAREBIN_DIST_POWERLAW;
+  options[OPT_FLAREBINDIST].iType      = 3;
+  options[OPT_FLAREBINDIST].bMultiFile = 1;
+  options[OPT_FLAREBINDIST].iModuleBit = FLAREBIN;
+  options[OPT_FLAREBINDIST].iFileType  = 1;
+  fnRead[OPT_FLAREBINDIST]             = &ReadFlareBinDist;
+
+  fvFormattedString(&options[OPT_FLAREBINNORMMODE].cName, "sFlareBinNormMode");
+  fvFormattedString(&options[OPT_FLAREBINNORMMODE].cDescr, "Flarebin normalization mode");
+  fvFormattedString(&options[OPT_FLAREBINNORMMODE].cDefault, "NORM_FROM_FFD");
+  fvFormattedString(&options[OPT_FLAREBINNORMMODE].cValues,
+                    "NORM_FROM_FFD NORM_FROM_FLAREPOWER_FRACTION NORM_FROM_RATE_AT_E0");
+  fvFormattedString(&options[OPT_FLAREBINNORMMODE].cDimension, "none");
+  options[OPT_FLAREBINNORMMODE].dDefault   = FLAREBIN_NORM_FROM_FFD;
+  options[OPT_FLAREBINNORMMODE].iType      = 3;
+  options[OPT_FLAREBINNORMMODE].bMultiFile = 1;
+  options[OPT_FLAREBINNORMMODE].iModuleBit = FLAREBIN;
+  options[OPT_FLAREBINNORMMODE].iFileType  = 1;
+  fnRead[OPT_FLAREBINNORMMODE]             = &ReadFlareBinNormMode;
+
+  fvFormattedString(&options[OPT_FLAREBINFRAC].cName, "dFlareBinFrac");
+  fvFormattedString(&options[OPT_FLAREBINFRAC].cDescr, "Target flare power fraction");
+  fvFormattedString(&options[OPT_FLAREBINFRAC].cDefault, "0");
+  fvFormattedString(&options[OPT_FLAREBINFRAC].cDimension, "none");
+  options[OPT_FLAREBINFRAC].dDefault   = 0;
+  options[OPT_FLAREBINFRAC].iType      = 2;
+  options[OPT_FLAREBINFRAC].bMultiFile = 1;
+  options[OPT_FLAREBINFRAC].iModuleBit = FLAREBIN;
+  options[OPT_FLAREBINFRAC].iFileType  = 1;
+  fnRead[OPT_FLAREBINFRAC]             = &ReadFlareBinFrac;
+
+  fvFormattedString(&options[OPT_FLAREBINBANDPASS].cName, "sFlareBinBandPass");
+  fvFormattedString(&options[OPT_FLAREBINBANDPASS].cDescr, "Input flare bandpass");
+  fvFormattedString(&options[OPT_FLAREBINBANDPASS].cDefault, "XUV");
+  fvFormattedString(&options[OPT_FLAREBINBANDPASS].cValues, "XUV KEPLER TESS BOLOMETRIC");
+  fvFormattedString(&options[OPT_FLAREBINBANDPASS].cDimension, "none");
+  options[OPT_FLAREBINBANDPASS].dDefault   = FLAREBIN_BANDPASS_XUV;
+  options[OPT_FLAREBINBANDPASS].iType      = 3;
+  options[OPT_FLAREBINBANDPASS].bMultiFile = 1;
+  options[OPT_FLAREBINBANDPASS].iModuleBit = FLAREBIN;
+  options[OPT_FLAREBINBANDPASS].iFileType  = 1;
+  fnRead[OPT_FLAREBINBANDPASS]             = &ReadFlareBinBandPass;
+
+  fvFormattedString(&options[OPT_FLAREBINEMIN].cName, "dFlareBinEmin");
+  fvFormattedString(&options[OPT_FLAREBINEMIN].cDescr, "Minimum flare energy");
+  fvFormattedString(&options[OPT_FLAREBINEMIN].cDefault, "0");
+  fvFormattedString(&options[OPT_FLAREBINEMIN].cDimension, "energy");
+  options[OPT_FLAREBINEMIN].dDefault   = 0;
+  options[OPT_FLAREBINEMIN].iType      = 2;
+  options[OPT_FLAREBINEMIN].bMultiFile = 1;
+  options[OPT_FLAREBINEMIN].iModuleBit = FLAREBIN;
+  options[OPT_FLAREBINEMIN].iFileType  = 1;
+  fnRead[OPT_FLAREBINEMIN]             = &ReadFlareBinEmin;
+
+  fvFormattedString(&options[OPT_FLAREBINEMAX].cName, "dFlareBinEmax");
+  fvFormattedString(&options[OPT_FLAREBINEMAX].cDescr, "Maximum flare energy");
+  fvFormattedString(&options[OPT_FLAREBINEMAX].cDefault, "0");
+  fvFormattedString(&options[OPT_FLAREBINEMAX].cDimension, "energy");
+  options[OPT_FLAREBINEMAX].dDefault   = 0;
+  options[OPT_FLAREBINEMAX].iType      = 2;
+  options[OPT_FLAREBINEMAX].bMultiFile = 1;
+  options[OPT_FLAREBINEMAX].iModuleBit = FLAREBIN;
+  options[OPT_FLAREBINEMAX].iFileType  = 1;
+  fnRead[OPT_FLAREBINEMAX]             = &ReadFlareBinEmax;
+
+  fvFormattedString(&options[OPT_FLAREBINESTOCHMIN].cName, "dFlareBinEStochMin");
+  fvFormattedString(&options[OPT_FLAREBINESTOCHMIN].cDescr,
+                    "Minimum stochastic flare energy");
+  fvFormattedString(&options[OPT_FLAREBINESTOCHMIN].cDefault, "0");
+  fvFormattedString(&options[OPT_FLAREBINESTOCHMIN].cDimension, "energy");
+  options[OPT_FLAREBINESTOCHMIN].dDefault   = 0;
+  options[OPT_FLAREBINESTOCHMIN].iType      = 2;
+  options[OPT_FLAREBINESTOCHMIN].bMultiFile = 1;
+  options[OPT_FLAREBINESTOCHMIN].iModuleBit = FLAREBIN;
+  options[OPT_FLAREBINESTOCHMIN].iFileType  = 1;
+  fnRead[OPT_FLAREBINESTOCHMIN]             = &ReadFlareBinEStochMin;
+
+  fvFormattedString(&options[OPT_FLAREBINALPHA].cName, "dFlareBinAlpha");
+  fvFormattedString(&options[OPT_FLAREBINALPHA].cDescr, "Power-law differential index");
+  fvFormattedString(&options[OPT_FLAREBINALPHA].cDefault, "2.0");
+  fvFormattedString(&options[OPT_FLAREBINALPHA].cDimension, "none");
+  options[OPT_FLAREBINALPHA].dDefault   = 2.0;
+  options[OPT_FLAREBINALPHA].iType      = 2;
+  options[OPT_FLAREBINALPHA].bMultiFile = 1;
+  options[OPT_FLAREBINALPHA].iModuleBit = FLAREBIN;
+  options[OPT_FLAREBINALPHA].iFileType  = 1;
+  fnRead[OPT_FLAREBINALPHA]             = &ReadFlareBinAlpha;
+
+  fvFormattedString(&options[OPT_FLAREBINK].cName, "dFlareBinK");
+  fvFormattedString(&options[OPT_FLAREBINK].cDescr, "Power-law normalization");
+  fvFormattedString(&options[OPT_FLAREBINK].cDefault, "0");
+  fvFormattedString(&options[OPT_FLAREBINK].cDimension, "1/time/energy");
+  options[OPT_FLAREBINK].dDefault   = 0;
+  options[OPT_FLAREBINK].iType      = 2;
+  options[OPT_FLAREBINK].bMultiFile = 1;
+  options[OPT_FLAREBINK].iModuleBit = FLAREBIN;
+  options[OPT_FLAREBINK].iFileType  = 1;
+  fnRead[OPT_FLAREBINK]             = &ReadFlareBinK;
+
+  fvFormattedString(&options[OPT_FLAREBINSLOPE].cName, "dFlareBinSlope");
+  fvFormattedString(&options[OPT_FLAREBINSLOPE].cDescr, "Cumulative FFD slope");
+  fvFormattedString(&options[OPT_FLAREBINSLOPE].cDefault, "0");
+  fvFormattedString(&options[OPT_FLAREBINSLOPE].cDimension, "none");
+  options[OPT_FLAREBINSLOPE].dDefault   = 0;
+  options[OPT_FLAREBINSLOPE].iType      = 2;
+  options[OPT_FLAREBINSLOPE].bMultiFile = 1;
+  options[OPT_FLAREBINSLOPE].iModuleBit = FLAREBIN;
+  options[OPT_FLAREBINSLOPE].iFileType  = 1;
+  fnRead[OPT_FLAREBINSLOPE]             = &ReadFlareBinSlope;
+
+  fvFormattedString(&options[OPT_FLAREBINYINT].cName, "dFlareBinYInt");
+  fvFormattedString(&options[OPT_FLAREBINYINT].cDescr, "Cumulative FFD intercept");
+  fvFormattedString(&options[OPT_FLAREBINYINT].cDefault, "0");
+  fvFormattedString(&options[OPT_FLAREBINYINT].cDimension, "1/time");
+  options[OPT_FLAREBINYINT].dDefault   = 0;
+  options[OPT_FLAREBINYINT].iType      = 2;
+  options[OPT_FLAREBINYINT].bMultiFile = 1;
+  options[OPT_FLAREBINYINT].iModuleBit = FLAREBIN;
+  options[OPT_FLAREBINYINT].iFileType  = 1;
+  fnRead[OPT_FLAREBINYINT]             = &ReadFlareBinYInt;
+
+  fvFormattedString(&options[OPT_FLAREBINLOGMU].cName, "dFlareBinLogMu");
+  fvFormattedString(&options[OPT_FLAREBINLOGMU].cDescr, "Lognormal mean in ln(E)");
+  fvFormattedString(&options[OPT_FLAREBINLOGMU].cDefault, "0");
+  fvFormattedString(&options[OPT_FLAREBINLOGMU].cDimension, "none");
+  options[OPT_FLAREBINLOGMU].dDefault   = 0;
+  options[OPT_FLAREBINLOGMU].iType      = 2;
+  options[OPT_FLAREBINLOGMU].bMultiFile = 1;
+  options[OPT_FLAREBINLOGMU].iModuleBit = FLAREBIN;
+  options[OPT_FLAREBINLOGMU].iFileType  = 1;
+  fnRead[OPT_FLAREBINLOGMU]             = &ReadFlareBinLogMu;
+
+  fvFormattedString(&options[OPT_FLAREBINLOGSIGMA].cName, "dFlareBinLogSigma");
+  fvFormattedString(&options[OPT_FLAREBINLOGSIGMA].cDescr, "Lognormal sigma in ln(E)");
+  fvFormattedString(&options[OPT_FLAREBINLOGSIGMA].cDefault, "1");
+  fvFormattedString(&options[OPT_FLAREBINLOGSIGMA].cDimension, "none");
+  options[OPT_FLAREBINLOGSIGMA].dDefault   = 1;
+  options[OPT_FLAREBINLOGSIGMA].iType      = 2;
+  options[OPT_FLAREBINLOGSIGMA].bMultiFile = 1;
+  options[OPT_FLAREBINLOGSIGMA].iModuleBit = FLAREBIN;
+  options[OPT_FLAREBINLOGSIGMA].iFileType  = 1;
+  fnRead[OPT_FLAREBINLOGSIGMA]             = &ReadFlareBinLogSigma;
+
+  fvFormattedString(&options[OPT_FLAREBINRATETOT].cName, "dFlareBinRateTot");
+  fvFormattedString(&options[OPT_FLAREBINRATETOT].cDescr, "Total flare rate");
+  fvFormattedString(&options[OPT_FLAREBINRATETOT].cDefault, "0");
+  fvFormattedString(&options[OPT_FLAREBINRATETOT].cDimension, "1/time");
+  options[OPT_FLAREBINRATETOT].dDefault   = 0;
+  options[OPT_FLAREBINRATETOT].iType      = 2;
+  options[OPT_FLAREBINRATETOT].bMultiFile = 1;
+  options[OPT_FLAREBINRATETOT].iModuleBit = FLAREBIN;
+  options[OPT_FLAREBINRATETOT].iFileType  = 1;
+  fnRead[OPT_FLAREBINRATETOT]             = &ReadFlareBinRateTot;
+
+  fvFormattedString(&options[OPT_FLAREBINTAU0].cName, "dFlareBinTau0");
+  fvFormattedString(&options[OPT_FLAREBINTAU0].cDescr, "Duration scaling tau0");
+  fvFormattedString(&options[OPT_FLAREBINTAU0].cDefault, "0");
+  fvFormattedString(&options[OPT_FLAREBINTAU0].cDimension, "time");
+  options[OPT_FLAREBINTAU0].dDefault   = 0;
+  options[OPT_FLAREBINTAU0].iType      = 2;
+  options[OPT_FLAREBINTAU0].bMultiFile = 1;
+  options[OPT_FLAREBINTAU0].iModuleBit = FLAREBIN;
+  options[OPT_FLAREBINTAU0].iFileType  = 1;
+  fnRead[OPT_FLAREBINTAU0]             = &ReadFlareBinTau0;
+
+  fvFormattedString(&options[OPT_FLAREBINDURE0].cName, "dFlareBinDurE0");
+  fvFormattedString(&options[OPT_FLAREBINDURE0].cDescr, "Duration scaling E0");
+  fvFormattedString(&options[OPT_FLAREBINDURE0].cDefault, "1");
+  fvFormattedString(&options[OPT_FLAREBINDURE0].cDimension, "energy");
+  options[OPT_FLAREBINDURE0].dDefault   = 1;
+  options[OPT_FLAREBINDURE0].iType      = 2;
+  options[OPT_FLAREBINDURE0].bMultiFile = 1;
+  options[OPT_FLAREBINDURE0].iModuleBit = FLAREBIN;
+  options[OPT_FLAREBINDURE0].iFileType  = 1;
+  fnRead[OPT_FLAREBINDURE0]             = &ReadFlareBinDurE0;
+
+  fvFormattedString(&options[OPT_FLAREBINDUREXP].cName, "dFlareBinDurExp");
+  fvFormattedString(&options[OPT_FLAREBINDUREXP].cDescr, "Duration scaling exponent");
+  fvFormattedString(&options[OPT_FLAREBINDUREXP].cDefault, "0");
+  fvFormattedString(&options[OPT_FLAREBINDUREXP].cDimension, "none");
+  options[OPT_FLAREBINDUREXP].dDefault   = 0;
+  options[OPT_FLAREBINDUREXP].iType      = 2;
+  options[OPT_FLAREBINDUREXP].bMultiFile = 1;
+  options[OPT_FLAREBINDUREXP].iModuleBit = FLAREBIN;
+  options[OPT_FLAREBINDUREXP].iFileType  = 1;
+  fnRead[OPT_FLAREBINDUREXP]             = &ReadFlareBinDurExp;
+
+  fvFormattedString(&options[OPT_FLAREBINXMIN].cName, "dFlareBinXMin");
+  fvFormattedString(&options[OPT_FLAREBINXMIN].cDescr, "Template minimum phase");
+  fvFormattedString(&options[OPT_FLAREBINXMIN].cDefault, "-1");
+  fvFormattedString(&options[OPT_FLAREBINXMIN].cDimension, "none");
+  options[OPT_FLAREBINXMIN].dDefault   = -1;
+  options[OPT_FLAREBINXMIN].iType      = 2;
+  options[OPT_FLAREBINXMIN].bMultiFile = 1;
+  options[OPT_FLAREBINXMIN].iModuleBit = FLAREBIN;
+  options[OPT_FLAREBINXMIN].iFileType  = 1;
+  fnRead[OPT_FLAREBINXMIN]             = &ReadFlareBinXMin;
+
+  fvFormattedString(&options[OPT_FLAREBINXEND].cName, "dFlareBinXEnd");
+  fvFormattedString(&options[OPT_FLAREBINXEND].cDescr, "Template maximum phase");
+  fvFormattedString(&options[OPT_FLAREBINXEND].cDefault, "20");
+  fvFormattedString(&options[OPT_FLAREBINXEND].cDimension, "none");
+  options[OPT_FLAREBINXEND].dDefault   = 20;
+  options[OPT_FLAREBINXEND].iType      = 2;
+  options[OPT_FLAREBINXEND].bMultiFile = 1;
+  options[OPT_FLAREBINXEND].iModuleBit = FLAREBIN;
+  options[OPT_FLAREBINXEND].iFileType  = 1;
+  fnRead[OPT_FLAREBINXEND]             = &ReadFlareBinXEnd;
+
+  fvFormattedString(&options[OPT_FLAREBINBANDC].cName, "dFlareBinBandC");
+  fvFormattedString(&options[OPT_FLAREBINBANDC].cDescr, "Band conversion C");
+  fvFormattedString(&options[OPT_FLAREBINBANDC].cDefault, "1");
+  fvFormattedString(&options[OPT_FLAREBINBANDC].cDimension, "none");
+  options[OPT_FLAREBINBANDC].dDefault   = 1;
+  options[OPT_FLAREBINBANDC].iType      = 2;
+  options[OPT_FLAREBINBANDC].bMultiFile = 1;
+  options[OPT_FLAREBINBANDC].iModuleBit = FLAREBIN;
+  options[OPT_FLAREBINBANDC].iFileType  = 1;
+  fnRead[OPT_FLAREBINBANDC]             = &ReadFlareBinBandC;
+
+  fvFormattedString(&options[OPT_FLAREBINBANDP].cName, "dFlareBinBandP");
+  fvFormattedString(&options[OPT_FLAREBINBANDP].cDescr, "Band conversion p");
+  fvFormattedString(&options[OPT_FLAREBINBANDP].cDefault, "1");
+  fvFormattedString(&options[OPT_FLAREBINBANDP].cDimension, "none");
+  options[OPT_FLAREBINBANDP].dDefault   = 1;
+  options[OPT_FLAREBINBANDP].iType      = 2;
+  options[OPT_FLAREBINBANDP].bMultiFile = 1;
+  options[OPT_FLAREBINBANDP].iModuleBit = FLAREBIN;
+  options[OPT_FLAREBINBANDP].iFileType  = 1;
+  fnRead[OPT_FLAREBINBANDP]             = &ReadFlareBinBandP;
+
+  fvFormattedString(&options[OPT_FLAREBINFXUVTHRESH1].cName, "dFlareBinFXUVThresh1");
+  fvFormattedString(&options[OPT_FLAREBINFXUVTHRESH1].cDescr, "Diagnostic FXUV threshold 1");
+  fvFormattedString(&options[OPT_FLAREBINFXUVTHRESH1].cDefault, "0");
+  fvFormattedString(&options[OPT_FLAREBINFXUVTHRESH1].cDimension, "energy/time/area");
+  options[OPT_FLAREBINFXUVTHRESH1].dDefault   = 0;
+  options[OPT_FLAREBINFXUVTHRESH1].iType      = 2;
+  options[OPT_FLAREBINFXUVTHRESH1].bMultiFile = 1;
+  options[OPT_FLAREBINFXUVTHRESH1].iModuleBit = FLAREBIN;
+  options[OPT_FLAREBINFXUVTHRESH1].iFileType  = 1;
+  fnRead[OPT_FLAREBINFXUVTHRESH1]             = &ReadFlareBinFXUVThresh1;
+
+  fvFormattedString(&options[OPT_FLAREBINFXUVTHRESH2].cName, "dFlareBinFXUVThresh2");
+  fvFormattedString(&options[OPT_FLAREBINFXUVTHRESH2].cDescr, "Diagnostic FXUV threshold 2");
+  fvFormattedString(&options[OPT_FLAREBINFXUVTHRESH2].cDefault, "0");
+  fvFormattedString(&options[OPT_FLAREBINFXUVTHRESH2].cDimension, "energy/time/area");
+  options[OPT_FLAREBINFXUVTHRESH2].dDefault   = 0;
+  options[OPT_FLAREBINFXUVTHRESH2].iType      = 2;
+  options[OPT_FLAREBINFXUVTHRESH2].bMultiFile = 1;
+  options[OPT_FLAREBINFXUVTHRESH2].iModuleBit = FLAREBIN;
+  options[OPT_FLAREBINFXUVTHRESH2].iFileType  = 1;
+  fnRead[OPT_FLAREBINFXUVTHRESH2]             = &ReadFlareBinFXUVThresh2;
 }
 
 void ReadOptionsFlareBin(BODY *body, CONTROL *control, FILES *files,
                          OPTIONS *options, SYSTEM *system,
                          fnReadOption fnRead[], int iBody) {
+  int iFile = iBody + 1;
   int iOpt;
+  int iLine;
 
-  (void)body;
-  (void)control;
-  (void)files;
   (void)system;
-
   for (iOpt = OPTSTARTFLAREBIN; iOpt < OPTENDFLAREBIN; iOpt++) {
     if (options[iOpt].iType != -1 && fnRead[iOpt] != NULL) {
-      fnRead[iOpt](body, control, files, &options[iOpt], system, iBody + 1);
+      fnRead[iOpt](body, control, files, &options[iOpt], system, iFile);
     }
+  }
+
+  if (body[iBody].dFlareBinEmax < body[iBody].dFlareBinEmin) {
+    iLine = options[OPT_FLAREBINEMAX].iLine[iFile];
+    if (iLine < 0) {
+      iLine = options[OPT_FLAREBINEMIN].iLine[iFile];
+    }
+    fvFlareBinOptionError(control, files, &options[OPT_FLAREBINEMAX], iFile,
+                          iLine, "must be >= dFlareBinEmin.");
+  }
+
+  if (body[iBody].dFlareBinEStochMin < body[iBody].dFlareBinEmin) {
+    iLine = options[OPT_FLAREBINESTOCHMIN].iLine[iFile];
+    if (iLine < 0) {
+      iLine = options[OPT_FLAREBINEMIN].iLine[iFile];
+    }
+    fvFlareBinOptionError(control, files, &options[OPT_FLAREBINESTOCHMIN],
+                          iFile, iLine, "must be >= dFlareBinEmin.");
+  }
+
+  if (body[iBody].dFlareBinEStochMin > body[iBody].dFlareBinEmax) {
+    iLine = options[OPT_FLAREBINESTOCHMIN].iLine[iFile];
+    if (iLine < 0) {
+      iLine = options[OPT_FLAREBINEMAX].iLine[iFile];
+    }
+    fvFlareBinOptionError(control, files, &options[OPT_FLAREBINESTOCHMIN],
+                          iFile, iLine, "must be <= dFlareBinEmax.");
+  }
+
+  if (body[iBody].dFlareBinXEnd <= body[iBody].dFlareBinXMin) {
+    iLine = options[OPT_FLAREBINXEND].iLine[iFile];
+    if (iLine < 0) {
+      iLine = options[OPT_FLAREBINXMIN].iLine[iFile];
+    }
+    fvFlareBinOptionError(control, files, &options[OPT_FLAREBINXEND], iFile,
+                          iLine, "must be > dFlareBinXMin.");
   }
 }
 

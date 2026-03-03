@@ -13,8 +13,7 @@ GCC_FLAGS2 = -shared -Wl,-install_name,vplanetlib.so
 endif
 
 default:
-	-python setup.py clean --all
-	-python setup.py develop
+	-python -m pip install -e .
 
 legacy:
 	-gcc -o bin/vplanet src/*.c -lm -DGITVERSION=\"$(GITVERSION)\"
