@@ -900,15 +900,58 @@ struct BODY {
   double *daLXUVFlare;
 
   // FLAREBIN
-  int bFlareBin;
-  int iFlareBinNEnergy;
-  int iFlareBinNPhase;
-  int iFlareBinNMax;
-  double dFlareBinEStochMin;
-  double dFlareBinLQ;
-  double dFlareBinPStoch;
-  double dFlareBinMu;
-  double dFlareBinITpl;
+  int bFlareBin; /**< Use flarebin module */
+
+  /* Configuration: model selectors and quadrature controls */
+  int iFlareBinSeed;        /**< Validation seed (production path is deterministic) */
+  int iFlareBinDist;        /**< Distribution type enum */
+  int iFlareBinNormMode;    /**< Normalization mode enum */
+  int iFlareBinBandPass;    /**< Input band-pass enum */
+  int iFlareBinQuadNE;      /**< Number of quadrature nodes in log-energy */
+  int iFlareBinQuadNX;      /**< Number of quadrature nodes in phase x */
+  int iFlareBinMaxOverlapN; /**< Overlap truncation order N_max */
+
+  /* Configuration: population and conversion parameters */
+  double dFlareBinOverlapTol; /**< Allowed neglected overlap probability */
+  double dFlareBinFrac;       /**< Flare-power fraction for normalization mode */
+  double dFlareBinEmin;       /**< Minimum input-band flare energy */
+  double dFlareBinEmax;       /**< Maximum input-band flare energy */
+  double dFlareBinEStochMin;  /**< Minimum stochastic flare energy */
+  double dFlareBinAlpha;      /**< Differential power-law index */
+  double dFlareBinK;          /**< Differential power-law normalization */
+  double dFlareBinSlope;      /**< Cumulative FFD slope a */
+  double dFlareBinYInt;       /**< Cumulative FFD intercept b */
+  double dFlareBinLogMu;      /**< Lognormal mean in ln(E) */
+  double dFlareBinLogSigma;   /**< Lognormal width in ln(E) */
+  double dFlareBinRateTot;    /**< Lognormal total event rate */
+  double dFlareBinTau0;       /**< Duration scaling normalization */
+  double dFlareBinDurE0;      /**< Duration scaling reference energy */
+  double dFlareBinDurExp;     /**< Duration scaling exponent gamma */
+  double dFlareBinXMin;       /**< Template lower phase bound */
+  double dFlareBinXEnd;       /**< Template upper phase bound */
+  double dFlareBinBandC;      /**< Bandpass conversion coefficient */
+  double dFlareBinBandP;      /**< Bandpass conversion exponent */
+  double dFlareBinFXUVThresh1; /**< Optional FXUV diagnostic threshold #1 */
+  double dFlareBinFXUVThresh2; /**< Optional FXUV diagnostic threshold #2 */
+
+  /* Derived/cached values from precompute */
+  double dFlareBinLQ;                /**< Quiescent luminosity L_q */
+  double dFlareBinPStoch;            /**< Mean stochastic flare power */
+  double dFlareBinMu;                /**< Expected active flare count */
+  double dFlareBinITpl;              /**< Template normalization integral */
+  double dFlareBinDeltaX;            /**< Template support width */
+  double dFlareBinLastPrecomputeAge; /**< Last precompute timestamp/age */
+
+  /* Cached deterministic quadrature grids */
+  int iFlareBinNEnergy; /**< Cached energy grid size */
+  int iFlareBinNPhase;  /**< Cached phase grid size */
+  double *daFlareBinQuadU;   /**< log-energy nodes */
+  double *daFlareBinQuadWU;  /**< log-energy weights */
+  double *daFlareBinQuadE;   /**< energy nodes */
+  double *daFlareBinQuadWE;  /**< energy weights (with Jacobian if needed) */
+  double *daFlareBinQuadX;   /**< phase nodes */
+  double *daFlareBinQuadWX;  /**< phase weights */
+  double *daFlareBinTplAtX;  /**< template values evaluated at phase nodes */
 
   // GALHABIT
   int bGalHabit;        /**< Use galhabit module */
