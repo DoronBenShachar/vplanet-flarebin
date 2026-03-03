@@ -1,8 +1,8 @@
 name: sanitizer
 
 on:
-  pull_request:
-    branches: [main]
+  schedule:
+    - cron: '55 2 * * *'
   workflow_dispatch:
 
 jobs:
