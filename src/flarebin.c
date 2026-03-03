@@ -1062,37 +1062,10 @@ void InitializeBodyFlareBin(BODY *body, CONTROL *control, UPDATE *update,
   (void)update;
   (void)iModule;
 
-  body[iBody].iFlareBinSeed        = 0;
-  body[iBody].iFlareBinDist        = FLAREBIN_DIST_POWERLAW;
-  body[iBody].iFlareBinNormMode    = FLAREBIN_NORM_FROM_FFD;
-  body[iBody].iFlareBinBandPass    = FLAREBIN_BANDPASS_XUV;
-  body[iBody].iFlareBinQuadNE      = 24;
-  body[iBody].iFlareBinQuadNX      = 16;
-  body[iBody].iFlareBinMaxOverlapN = FLAREBIN_OVERLAP_N1;
+  /* User-provided option values are already parsed into BODY before this hook.
+   * Initialize only derived cache/storage fields here. */
   body[iBody].iFlareBinNEnergy     = 0;
   body[iBody].iFlareBinNPhase      = 0;
-
-  body[iBody].dFlareBinOverlapTol = 1e-6;
-  body[iBody].dFlareBinFrac       = 0;
-  body[iBody].dFlareBinEmin       = 0;
-  body[iBody].dFlareBinEmax       = 0;
-  body[iBody].dFlareBinEStochMin = 0;
-  body[iBody].dFlareBinAlpha     = 0;
-  body[iBody].dFlareBinK         = 0;
-  body[iBody].dFlareBinSlope     = 0;
-  body[iBody].dFlareBinYInt      = 0;
-  body[iBody].dFlareBinLogMu     = 0;
-  body[iBody].dFlareBinLogSigma  = 0;
-  body[iBody].dFlareBinRateTot   = 0;
-  body[iBody].dFlareBinTau0      = 0;
-  body[iBody].dFlareBinDurE0     = 0;
-  body[iBody].dFlareBinDurExp    = 0;
-  body[iBody].dFlareBinXMin      = -1;
-  body[iBody].dFlareBinXEnd      = 20;
-  body[iBody].dFlareBinBandC     = 1;
-  body[iBody].dFlareBinBandP     = 1;
-  body[iBody].dFlareBinFXUVThresh1 = 0;
-  body[iBody].dFlareBinFXUVThresh2 = 0;
 
   body[iBody].dFlareBinLQ        = 0;
   body[iBody].dFlareBinPStoch    = 0;

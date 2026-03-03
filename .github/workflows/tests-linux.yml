@@ -49,6 +49,11 @@ jobs:
             tests/Stellar/HZSingle/test_HZSingle.py \
             --tb=short -v --timeout=300 --junitxml=junit/test-results.xml
 
+      - name: Run flarebin smoke and determinism check
+        timeout-minutes: 5
+        run: |
+          bash tests/ci_flarebin_smoke.sh
+
       - name: Publish test results
         uses: EnricoMi/publish-unit-test-result-action@v2
         if: always()
@@ -97,6 +102,11 @@ jobs:
             tests/test_quantity.py \
             tests/Stellar/HZSingle/test_HZSingle.py \
             --tb=short -v --timeout=300 --junitxml=junit/test-results.xml
+
+      - name: Run flarebin smoke and determinism check
+        timeout-minutes: 5
+        run: |
+          bash tests/ci_flarebin_smoke.sh
 
       - name: Publish test results
         uses: EnricoMi/publish-unit-test-result-action@v2
