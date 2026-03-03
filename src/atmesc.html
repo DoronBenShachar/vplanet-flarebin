@@ -57,6 +57,8 @@
 <li class="toctree-l2"><a class="reference internal" href="body.html">body</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">atmesc</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#atmesc-c">atmesc.c</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#_CPPv423ATMESC_FLAREBIN_CONTEXT"><code class="docutils literal notranslate"><span class="pre">ATMESC_FLAREBIN_CONTEXT</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#_CPPv420ATMESC_RHS_COMPONENT"><code class="docutils literal notranslate"><span class="pre">ATMESC_RHS_COMPONENT</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#_CPPv414BodyCopyAtmEscP4BODYP4BODYiii"><code class="docutils literal notranslate"><span class="pre">BodyCopyAtmEsc()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#_CPPv48ReadFXUVP4BODYP7CONTROLP5FILESP7OPTIONSP6SYSTEMi"><code class="docutils literal notranslate"><span class="pre">ReadFXUV()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#_CPPv413ReadThermTempP4BODYP7CONTROLP5FILESP7OPTIONSP6SYSTEMi"><code class="docutils literal notranslate"><span class="pre">ReadThermTemp()</span></code></a></li>
@@ -128,6 +130,9 @@
 <li class="toctree-l4"><a class="reference internal" href="#_CPPv418WriteAtmXAbsEffH2OP4BODYP7CONTROLP6OUTPUTP6SYSTEMP5UNITSP6UPDATEiPdPPc"><code class="docutils literal notranslate"><span class="pre">WriteAtmXAbsEffH2O()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#_CPPv417WritePlanetRadXUVP4BODYP7CONTROLP6OUTPUTP6SYSTEMP5UNITSP6UPDATEiPdPPc"><code class="docutils literal notranslate"><span class="pre">WritePlanetRadXUV()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#_CPPv415WriteDEnvMassDtP4BODYP7CONTROLP6OUTPUTP6SYSTEMP5UNITSP6UPDATEiPdPPc"><code class="docutils literal notranslate"><span class="pre">WriteDEnvMassDt()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#_CPPv427fdAtmEscEnvelopeMdotFromRhsPK4BODYiPK10ATMESC_RHS"><code class="docutils literal notranslate"><span class="pre">fdAtmEscEnvelopeMdotFromRhs()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#_CPPv423WriteMdotXUVMeanForcingP4BODYP7CONTROLP6OUTPUTP6SYSTEMP5UNITSP6UPDATEiPdPPc"><code class="docutils literal notranslate"><span class="pre">WriteMdotXUVMeanForcing()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#_CPPv421WriteMdotXUVEffectiveP4BODYP7CONTROLP6OUTPUTP6SYSTEMP5UNITSP6UPDATEiPdPPc"><code class="docutils literal notranslate"><span class="pre">WriteMdotXUVEffective()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#_CPPv414WriteThermTempP4BODYP7CONTROLP6OUTPUTP6SYSTEMP5UNITSP6UPDATEiPdPPc"><code class="docutils literal notranslate"><span class="pre">WriteThermTemp()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#_CPPv413WriteFlowTempP4BODYP7CONTROLP6OUTPUTP6SYSTEMP5UNITSP6UPDATEiPdPPc"><code class="docutils literal notranslate"><span class="pre">WriteFlowTemp()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#_CPPv413WritePresSurfP4BODYP7CONTROLP6OUTPUTP6SYSTEMP5UNITSP6UPDATEiPdPPc"><code class="docutils literal notranslate"><span class="pre">WritePresSurf()</span></code></a></li>
@@ -154,6 +159,12 @@
 <li class="toctree-l4"><a class="reference internal" href="#_CPPv49LogAtmEscP4BODYP7CONTROLP6OUTPUTP6SYSTEMP6UPDATEA_13fnWriteOutputP4FILE"><code class="docutils literal notranslate"><span class="pre">LogAtmEsc()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#_CPPv413LogBodyAtmEscP4BODYP7CONTROLP6OUTPUTP6SYSTEMP6UPDATEA_13fnWriteOutputP4FILEi"><code class="docutils literal notranslate"><span class="pre">LogBodyAtmEsc()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#_CPPv415AddModuleAtmEscP7CONTROLP6MODULEii"><code class="docutils literal notranslate"><span class="pre">AddModuleAtmEsc()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#_CPPv420fdAtmEscRhsComponentPK10ATMESC_RHS20ATMESC_RHS_COMPONENT"><code class="docutils literal notranslate"><span class="pre">fdAtmEscRhsComponent()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#_CPPv425fdAtmEscRhsCallbackAtFXUVdPv"><code class="docutils literal notranslate"><span class="pre">fdAtmEscRhsCallbackAtFXUV()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#_CPPv428fbAtmEscUseFlareBinForPlanetPK4BODYPK6SYSTEMiPi"><code class="docutils literal notranslate"><span class="pre">fbAtmEscUseFlareBinForPlanet()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#_CPPv429fdAtmEscEffectiveRhsComponentP4BODYP6SYSTEMi20ATMESC_RHS_COMPONENT"><code class="docutils literal notranslate"><span class="pre">fdAtmEscEffectiveRhsComponent()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#_CPPv425fbDoesWaterEscapeNoUpdatePK4BODYi"><code class="docutils literal notranslate"><span class="pre">fbDoesWaterEscapeNoUpdate()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#_CPPv418AtmEscRhsGivenFXUVPK4BODYPK6SYSTEMid"><code class="docutils literal notranslate"><span class="pre">AtmEscRhsGivenFXUV()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#_CPPv421fdDSurfaceWaterMassDtP4BODYP6SYSTEMPi"><code class="docutils literal notranslate"><span class="pre">fdDSurfaceWaterMassDt()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#_CPPv415fdDOxygenMassDtP4BODYP6SYSTEMPi"><code class="docutils literal notranslate"><span class="pre">fdDOxygenMassDt()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#_CPPv421fdDOxygenMantleMassDtP4BODYP6SYSTEMPi"><code class="docutils literal notranslate"><span class="pre">fdDOxygenMantleMassDt()</span></code></a></li>
@@ -173,6 +184,10 @@
 <li class="toctree-l4"><a class="reference internal" href="#_CPPv416fdRRCriticalFluxP4BODYi"><code class="docutils literal notranslate"><span class="pre">fdRRCriticalFlux()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#_CPPv419fbBondiCriticalDmDtP4BODYi"><code class="docutils literal notranslate"><span class="pre">fbBondiCriticalDmDt()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#_CPPv426fvAtmEscRegimeChangeOutputiid"><code class="docutils literal notranslate"><span class="pre">fvAtmEscRegimeChangeOutput()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#_CPPv4N23ATMESC_FLAREBIN_CONTEXT4bodyE"><code class="docutils literal notranslate"><span class="pre">body</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#_CPPv4N23ATMESC_FLAREBIN_CONTEXT6systemE"><code class="docutils literal notranslate"><span class="pre">system</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#_CPPv4N23ATMESC_FLAREBIN_CONTEXT5iBodyE"><code class="docutils literal notranslate"><span class="pre">iBody</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#_CPPv4N23ATMESC_FLAREBIN_CONTEXT10iComponentE"><code class="docutils literal notranslate"><span class="pre">iComponent</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#atmesc-h">atmesc.h</a><ul>
@@ -306,6 +321,53 @@ and water vapor atmospheres following <a href="#id2"><span class="problematic" i
 </dd>
 </dl>
 </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-typedefs">Typedefs</p>
+<dl class="cpp type">
+<dt class="sig sig-object cpp" id="_CPPv423ATMESC_FLAREBIN_CONTEXT">
+<span id="_CPPv323ATMESC_FLAREBIN_CONTEXT"></span><span id="_CPPv223ATMESC_FLAREBIN_CONTEXT"></span><span id="ATMESC_FLAREBIN_CONTEXT"></span><span class="target" id="atmesc_8c_1a4ebec7de3e079b9b6203dcc1b7118e4f"></span><span class="k"><span class="pre">typedef</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv423ATMESC_FLAREBIN_CONTEXT" title="ATMESC_FLAREBIN_CONTEXT"><span class="n"><span class="pre">ATMESC_FLAREBIN_CONTEXT</span></span></a><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ATMESC_FLAREBIN_CONTEXT</span></span></span><a class="headerlink" href="#_CPPv423ATMESC_FLAREBIN_CONTEXT" title="Link to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+</div>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-enums">Enums</p>
+<dl class="cpp enum">
+<dt class="sig sig-object cpp" id="_CPPv420ATMESC_RHS_COMPONENT">
+<span id="_CPPv320ATMESC_RHS_COMPONENT"></span><span id="_CPPv220ATMESC_RHS_COMPONENT"></span><span class="target" id="atmesc_8c_1a6aa31fa5597ffc714541f8bf99d77b01"></span><span class="k"><span class="pre">enum</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ATMESC_RHS_COMPONENT</span></span></span><a class="headerlink" href="#_CPPv420ATMESC_RHS_COMPONENT" title="Link to this definition"></a><br /></dt>
+<dd><p><em>Values:</em></p>
+<dl class="cpp enumerator">
+<dt class="sig sig-object cpp" id="_CPPv4N20ATMESC_RHS_COMPONENT33ATMESC_RHS_COMPONENT_DSURFWATERDTE">
+<span id="_CPPv3N20ATMESC_RHS_COMPONENT33ATMESC_RHS_COMPONENT_DSURFWATERDTE"></span><span id="_CPPv2N20ATMESC_RHS_COMPONENT33ATMESC_RHS_COMPONENT_DSURFWATERDTE"></span><span class="target" id="atmesc_8c_1a6aa31fa5597ffc714541f8bf99d77b01a5a27ee0e2064903b3242bd4f642464ad"></span><span class="k"><span class="pre">enumerator</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ATMESC_RHS_COMPONENT_DSURFWATERDT</span></span></span><a class="headerlink" href="#_CPPv4N20ATMESC_RHS_COMPONENT33ATMESC_RHS_COMPONENT_DSURFWATERDTE" title="Link to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp enumerator">
+<dt class="sig sig-object cpp" id="_CPPv4N20ATMESC_RHS_COMPONENT30ATMESC_RHS_COMPONENT_DOXYGENDTE">
+<span id="_CPPv3N20ATMESC_RHS_COMPONENT30ATMESC_RHS_COMPONENT_DOXYGENDTE"></span><span id="_CPPv2N20ATMESC_RHS_COMPONENT30ATMESC_RHS_COMPONENT_DOXYGENDTE"></span><span class="target" id="atmesc_8c_1a6aa31fa5597ffc714541f8bf99d77b01ad85be10465235f5fe0922af25a938021"></span><span class="k"><span class="pre">enumerator</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ATMESC_RHS_COMPONENT_DOXYGENDT</span></span></span><a class="headerlink" href="#_CPPv4N20ATMESC_RHS_COMPONENT30ATMESC_RHS_COMPONENT_DOXYGENDTE" title="Link to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp enumerator">
+<dt class="sig sig-object cpp" id="_CPPv4N20ATMESC_RHS_COMPONENT36ATMESC_RHS_COMPONENT_DOXYGENMANTLEDTE">
+<span id="_CPPv3N20ATMESC_RHS_COMPONENT36ATMESC_RHS_COMPONENT_DOXYGENMANTLEDTE"></span><span id="_CPPv2N20ATMESC_RHS_COMPONENT36ATMESC_RHS_COMPONENT_DOXYGENMANTLEDTE"></span><span class="target" id="atmesc_8c_1a6aa31fa5597ffc714541f8bf99d77b01afaf78ce34d842fbe4d6f98905f7aadf2"></span><span class="k"><span class="pre">enumerator</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ATMESC_RHS_COMPONENT_DOXYGENMANTLEDT</span></span></span><a class="headerlink" href="#_CPPv4N20ATMESC_RHS_COMPONENT36ATMESC_RHS_COMPONENT_DOXYGENMANTLEDTE" title="Link to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp enumerator">
+<dt class="sig sig-object cpp" id="_CPPv4N20ATMESC_RHS_COMPONENT32ATMESC_RHS_COMPONENT_DENVELOPEDTE">
+<span id="_CPPv3N20ATMESC_RHS_COMPONENT32ATMESC_RHS_COMPONENT_DENVELOPEDTE"></span><span id="_CPPv2N20ATMESC_RHS_COMPONENT32ATMESC_RHS_COMPONENT_DENVELOPEDTE"></span><span class="target" id="atmesc_8c_1a6aa31fa5597ffc714541f8bf99d77b01a9a344e2d0d9a9c7505a8e25bf132afab"></span><span class="k"><span class="pre">enumerator</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ATMESC_RHS_COMPONENT_DENVELOPEDT</span></span></span><a class="headerlink" href="#_CPPv4N20ATMESC_RHS_COMPONENT32ATMESC_RHS_COMPONENT_DENVELOPEDTE" title="Link to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp enumerator">
+<dt class="sig sig-object cpp" id="_CPPv4N20ATMESC_RHS_COMPONENT37ATMESC_RHS_COMPONENT_DENVELOPEDTBONDIE">
+<span id="_CPPv3N20ATMESC_RHS_COMPONENT37ATMESC_RHS_COMPONENT_DENVELOPEDTBONDIE"></span><span id="_CPPv2N20ATMESC_RHS_COMPONENT37ATMESC_RHS_COMPONENT_DENVELOPEDTBONDIE"></span><span class="target" id="atmesc_8c_1a6aa31fa5597ffc714541f8bf99d77b01aab2e70f96525a55ee5ad85ebecc1fd8b"></span><span class="k"><span class="pre">enumerator</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ATMESC_RHS_COMPONENT_DENVELOPEDTBONDI</span></span></span><a class="headerlink" href="#_CPPv4N20ATMESC_RHS_COMPONENT37ATMESC_RHS_COMPONENT_DENVELOPEDTBONDIE" title="Link to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp enumerator">
+<dt class="sig sig-object cpp" id="_CPPv4N20ATMESC_RHS_COMPONENT34ATMESC_RHS_COMPONENT_DENVELOPEDTRRE">
+<span id="_CPPv3N20ATMESC_RHS_COMPONENT34ATMESC_RHS_COMPONENT_DENVELOPEDTRRE"></span><span id="_CPPv2N20ATMESC_RHS_COMPONENT34ATMESC_RHS_COMPONENT_DENVELOPEDTRRE"></span><span class="target" id="atmesc_8c_1a6aa31fa5597ffc714541f8bf99d77b01a3fc3f9f60a088792da6bf7d83c22a19f"></span><span class="k"><span class="pre">enumerator</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ATMESC_RHS_COMPONENT_DENVELOPEDTRR</span></span></span><a class="headerlink" href="#_CPPv4N20ATMESC_RHS_COMPONENT34ATMESC_RHS_COMPONENT_DENVELOPEDTRRE" title="Link to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
 <div class="breathe-sectiondef docutils container">
 <p class="breathe-sectiondef-title rubric" id="breathe-section-title-functions">Functions</p>
 <dl class="cpp function">
@@ -1571,6 +1633,53 @@ escape model.</p>
 </dd></dl>
 
 <dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv427fdAtmEscEnvelopeMdotFromRhsPK4BODYiPK10ATMESC_RHS">
+<span id="_CPPv327fdAtmEscEnvelopeMdotFromRhsPK4BODYiPK10ATMESC_RHS"></span><span id="_CPPv227fdAtmEscEnvelopeMdotFromRhsPK4BODYiPK10ATMESC_RHS"></span><span id="fdAtmEscEnvelopeMdotFromRhs__BODYCP.i.ATMESC_RHSCP"></span><span class="target" id="atmesc_8c_1a3757f916d9ffbdf545244c479cdd974b"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">fdAtmEscEnvelopeMdotFromRhs</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="vplanet.html#_CPPv44BODY" title="BODY"><span class="n"><span class="pre">BODY</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">body</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">iBody</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">ATMESC_RHS</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">rhs</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv427fdAtmEscEnvelopeMdotFromRhsPK4BODYiPK10ATMESC_RHS" title="Link to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv423WriteMdotXUVMeanForcingP4BODYP7CONTROLP6OUTPUTP6SYSTEMP5UNITSP6UPDATEiPdPPc">
+<span id="_CPPv323WriteMdotXUVMeanForcingP4BODYP7CONTROLP6OUTPUTP6SYSTEMP5UNITSP6UPDATEiPdPPc"></span><span id="_CPPv223WriteMdotXUVMeanForcingP4BODYP7CONTROLP6OUTPUTP6SYSTEMP5UNITSP6UPDATEiPdPPc"></span><span id="WriteMdotXUVMeanForcing__BODYP.CONTROLP.OUTPUTP.SYSTEMP.UNITSP.UPDATEP.i.doubleP.cPP"></span><span class="target" id="atmesc_8c_1a98e81b982b1f7424a496fb19a1c6bcdf"></span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">WriteMdotXUVMeanForcing</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="vplanet.html#_CPPv44BODY" title="BODY"><span class="n"><span class="pre">BODY</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">body</span></span>, <a class="reference internal" href="vplanet.html#_CPPv47CONTROL" title="CONTROL"><span class="n"><span class="pre">CONTROL</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">control</span></span>, <a class="reference internal" href="vplanet.html#_CPPv46OUTPUT" title="OUTPUT"><span class="n"><span class="pre">OUTPUT</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">output</span></span>, <a class="reference internal" href="vplanet.html#_CPPv46SYSTEM" title="SYSTEM"><span class="n"><span class="pre">SYSTEM</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">system</span></span>, <a class="reference internal" href="vplanet.html#_CPPv45UNITS" title="UNITS"><span class="n"><span class="pre">UNITS</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">units</span></span>, <a class="reference internal" href="vplanet.html#_CPPv46UPDATE" title="UPDATE"><span class="n"><span class="pre">UPDATE</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">update</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">iBody</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">dTmp</span></span>, <span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">cUnit</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv423WriteMdotXUVMeanForcingP4BODYP7CONTROLP6OUTPUTP6SYSTEMP5UNITSP6UPDATEiPdPPc" title="Link to this definition"></a><br /></dt>
+<dd><p>Logs the envelope mass-loss rate using mean XUV forcing.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>body</strong> – A pointer to the current <a class="reference internal" href="vplanet.html#struct_b_o_d_y"><span class="std std-ref">BODY</span></a> instance </p></li>
+<li><p><strong>control</strong> – A pointer to the current <a class="reference internal" href="vplanet.html#struct_c_o_n_t_r_o_l"><span class="std std-ref">CONTROL</span></a> instance </p></li>
+<li><p><strong>output</strong> – A pointer to the current <a class="reference internal" href="vplanet.html#struct_o_u_t_p_u_t"><span class="std std-ref">OUTPUT</span></a> instance </p></li>
+<li><p><strong>system</strong> – A pointer to the current <a class="reference internal" href="vplanet.html#struct_s_y_s_t_e_m"><span class="std std-ref">SYSTEM</span></a> instance </p></li>
+<li><p><strong>units</strong> – A pointer to the current <a class="reference internal" href="vplanet.html#struct_u_n_i_t_s"><span class="std std-ref">UNITS</span></a> instance </p></li>
+<li><p><strong>update</strong> – A pointer to the current <a class="reference internal" href="vplanet.html#struct_u_p_d_a_t_e"><span class="std std-ref">UPDATE</span></a> instance </p></li>
+<li><p><strong>iBody</strong> – The current body Number </p></li>
+<li><p><strong>dTmp</strong> – Temporary variable used for unit conversions </p></li>
+<li><p><strong>cUnit</strong> – The unit for this variable </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv421WriteMdotXUVEffectiveP4BODYP7CONTROLP6OUTPUTP6SYSTEMP5UNITSP6UPDATEiPdPPc">
+<span id="_CPPv321WriteMdotXUVEffectiveP4BODYP7CONTROLP6OUTPUTP6SYSTEMP5UNITSP6UPDATEiPdPPc"></span><span id="_CPPv221WriteMdotXUVEffectiveP4BODYP7CONTROLP6OUTPUTP6SYSTEMP5UNITSP6UPDATEiPdPPc"></span><span id="WriteMdotXUVEffective__BODYP.CONTROLP.OUTPUTP.SYSTEMP.UNITSP.UPDATEP.i.doubleP.cPP"></span><span class="target" id="atmesc_8c_1a80400dc395c37df6d6c91818f6192d8e"></span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">WriteMdotXUVEffective</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="vplanet.html#_CPPv44BODY" title="BODY"><span class="n"><span class="pre">BODY</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">body</span></span>, <a class="reference internal" href="vplanet.html#_CPPv47CONTROL" title="CONTROL"><span class="n"><span class="pre">CONTROL</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">control</span></span>, <a class="reference internal" href="vplanet.html#_CPPv46OUTPUT" title="OUTPUT"><span class="n"><span class="pre">OUTPUT</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">output</span></span>, <a class="reference internal" href="vplanet.html#_CPPv46SYSTEM" title="SYSTEM"><span class="n"><span class="pre">SYSTEM</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">system</span></span>, <a class="reference internal" href="vplanet.html#_CPPv45UNITS" title="UNITS"><span class="n"><span class="pre">UNITS</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">units</span></span>, <a class="reference internal" href="vplanet.html#_CPPv46UPDATE" title="UPDATE"><span class="n"><span class="pre">UPDATE</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">update</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">iBody</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">dTmp</span></span>, <span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">cUnit</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv421WriteMdotXUVEffectiveP4BODYP7CONTROLP6OUTPUTP6SYSTEMP5UNITSP6UPDATEiPdPPc" title="Link to this definition"></a><br /></dt>
+<dd><p>Logs the deterministic effective-averaged envelope mass-loss rate.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>body</strong> – A pointer to the current <a class="reference internal" href="vplanet.html#struct_b_o_d_y"><span class="std std-ref">BODY</span></a> instance </p></li>
+<li><p><strong>control</strong> – A pointer to the current <a class="reference internal" href="vplanet.html#struct_c_o_n_t_r_o_l"><span class="std std-ref">CONTROL</span></a> instance </p></li>
+<li><p><strong>output</strong> – A pointer to the current <a class="reference internal" href="vplanet.html#struct_o_u_t_p_u_t"><span class="std std-ref">OUTPUT</span></a> instance </p></li>
+<li><p><strong>system</strong> – A pointer to the current <a class="reference internal" href="vplanet.html#struct_s_y_s_t_e_m"><span class="std std-ref">SYSTEM</span></a> instance </p></li>
+<li><p><strong>units</strong> – A pointer to the current <a class="reference internal" href="vplanet.html#struct_u_n_i_t_s"><span class="std std-ref">UNITS</span></a> instance </p></li>
+<li><p><strong>update</strong> – A pointer to the current <a class="reference internal" href="vplanet.html#struct_u_p_d_a_t_e"><span class="std std-ref">UPDATE</span></a> instance </p></li>
+<li><p><strong>iBody</strong> – The current body Number </p></li>
+<li><p><strong>dTmp</strong> – Temporary variable used for unit conversions </p></li>
+<li><p><strong>cUnit</strong> – The unit for this variable </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv414WriteThermTempP4BODYP7CONTROLP6OUTPUTP6SYSTEMP5UNITSP6UPDATEiPdPPc">
 <span id="_CPPv314WriteThermTempP4BODYP7CONTROLP6OUTPUTP6SYSTEMP5UNITSP6UPDATEiPdPPc"></span><span id="_CPPv214WriteThermTempP4BODYP7CONTROLP6OUTPUTP6SYSTEMP5UNITSP6UPDATEiPdPPc"></span><span id="WriteThermTemp__BODYP.CONTROLP.OUTPUTP.SYSTEMP.UNITSP.UPDATEP.i.doubleP.cPP"></span><span class="target" id="atmesc_8c_1a656dc7d840a0cda3f9538e3a3aa9441a"></span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">WriteThermTemp</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="vplanet.html#_CPPv44BODY" title="BODY"><span class="n"><span class="pre">BODY</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">body</span></span>, <a class="reference internal" href="vplanet.html#_CPPv47CONTROL" title="CONTROL"><span class="n"><span class="pre">CONTROL</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">control</span></span>, <a class="reference internal" href="vplanet.html#_CPPv46OUTPUT" title="OUTPUT"><span class="n"><span class="pre">OUTPUT</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">output</span></span>, <a class="reference internal" href="vplanet.html#_CPPv46SYSTEM" title="SYSTEM"><span class="n"><span class="pre">SYSTEM</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">system</span></span>, <a class="reference internal" href="vplanet.html#_CPPv45UNITS" title="UNITS"><span class="n"><span class="pre">UNITS</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">units</span></span>, <a class="reference internal" href="vplanet.html#_CPPv46UPDATE" title="UPDATE"><span class="n"><span class="pre">UPDATE</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">update</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">iBody</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">dTmp</span></span>, <span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">cUnit</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv414WriteThermTempP4BODYP7CONTROLP6OUTPUTP6SYSTEMP5UNITSP6UPDATEiPdPPc" title="Link to this definition"></a><br /></dt>
 <dd><p>Logs the thermospheric temperature.</p>
@@ -2086,6 +2195,56 @@ escape model.</p>
 </dd></dl>
 
 <dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv420fdAtmEscRhsComponentPK10ATMESC_RHS20ATMESC_RHS_COMPONENT">
+<span id="_CPPv320fdAtmEscRhsComponentPK10ATMESC_RHS20ATMESC_RHS_COMPONENT"></span><span id="_CPPv220fdAtmEscRhsComponentPK10ATMESC_RHS20ATMESC_RHS_COMPONENT"></span><span id="fdAtmEscRhsComponent__ATMESC_RHSCP.ATMESC_RHS_COMPONENT"></span><span class="target" id="atmesc_8c_1a45c56d22d8ad8416371a7aa8fc503424"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">fdAtmEscRhsComponent</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">ATMESC_RHS</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">rhs</span></span>, <a class="reference internal" href="#_CPPv420ATMESC_RHS_COMPONENT" title="ATMESC_RHS_COMPONENT"><span class="n"><span class="pre">ATMESC_RHS_COMPONENT</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">iComponent</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv420fdAtmEscRhsComponentPK10ATMESC_RHS20ATMESC_RHS_COMPONENT" title="Link to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv425fdAtmEscRhsCallbackAtFXUVdPv">
+<span id="_CPPv325fdAtmEscRhsCallbackAtFXUVdPv"></span><span id="_CPPv225fdAtmEscRhsCallbackAtFXUVdPv"></span><span id="fdAtmEscRhsCallbackAtFXUV__double.voidP"></span><span class="target" id="atmesc_8c_1a6f79e554ea8d3621c51f9b70ae2d3d18"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">fdAtmEscRhsCallbackAtFXUV</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">dFXUV</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">pvContext</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv425fdAtmEscRhsCallbackAtFXUVdPv" title="Link to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv428fbAtmEscUseFlareBinForPlanetPK4BODYPK6SYSTEMiPi">
+<span id="_CPPv328fbAtmEscUseFlareBinForPlanetPK4BODYPK6SYSTEMiPi"></span><span id="_CPPv228fbAtmEscUseFlareBinForPlanetPK4BODYPK6SYSTEMiPi"></span><span id="fbAtmEscUseFlareBinForPlanet__BODYCP.SYSTEMCP.i.iP"></span><span class="target" id="atmesc_8c_1a357f648db6eba950dafe29f0d182ef15"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">fbAtmEscUseFlareBinForPlanet</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="vplanet.html#_CPPv44BODY" title="BODY"><span class="n"><span class="pre">BODY</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">body</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="vplanet.html#_CPPv46SYSTEM" title="SYSTEM"><span class="n"><span class="pre">SYSTEM</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">system</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">iBody</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">iStar</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv428fbAtmEscUseFlareBinForPlanetPK4BODYPK6SYSTEMiPi" title="Link to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv429fdAtmEscEffectiveRhsComponentP4BODYP6SYSTEMi20ATMESC_RHS_COMPONENT">
+<span id="_CPPv329fdAtmEscEffectiveRhsComponentP4BODYP6SYSTEMi20ATMESC_RHS_COMPONENT"></span><span id="_CPPv229fdAtmEscEffectiveRhsComponentP4BODYP6SYSTEMi20ATMESC_RHS_COMPONENT"></span><span id="fdAtmEscEffectiveRhsComponent__BODYP.SYSTEMP.i.ATMESC_RHS_COMPONENT"></span><span class="target" id="atmesc_8c_1a297115efa8f56af39ea193118e7cb8ca"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">fdAtmEscEffectiveRhsComponent</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="vplanet.html#_CPPv44BODY" title="BODY"><span class="n"><span class="pre">BODY</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">body</span></span>, <a class="reference internal" href="vplanet.html#_CPPv46SYSTEM" title="SYSTEM"><span class="n"><span class="pre">SYSTEM</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">system</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">iBody</span></span>, <a class="reference internal" href="#_CPPv420ATMESC_RHS_COMPONENT" title="ATMESC_RHS_COMPONENT"><span class="n"><span class="pre">ATMESC_RHS_COMPONENT</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">iComponent</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv429fdAtmEscEffectiveRhsComponentP4BODYP6SYSTEMi20ATMESC_RHS_COMPONENT" title="Link to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv425fbDoesWaterEscapeNoUpdatePK4BODYi">
+<span id="_CPPv325fbDoesWaterEscapeNoUpdatePK4BODYi"></span><span id="_CPPv225fbDoesWaterEscapeNoUpdatePK4BODYi"></span><span id="fbDoesWaterEscapeNoUpdate__BODYCP.i"></span><span class="target" id="atmesc_8c_1a45dfd7b22b8f023151983c2588e1f2d6"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">fbDoesWaterEscapeNoUpdate</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="vplanet.html#_CPPv44BODY" title="BODY"><span class="n"><span class="pre">BODY</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">body</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">iBody</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv425fbDoesWaterEscapeNoUpdatePK4BODYi" title="Link to this definition"></a><br /></dt>
+<dd><p>Side-effect-free water escape predicate used by the pure RHS evaluation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>body</strong> – A pointer to the current <a class="reference internal" href="vplanet.html#struct_b_o_d_y"><span class="std std-ref">BODY</span></a> instance </p></li>
+<li><p><strong>iBody</strong> – The current body index </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv418AtmEscRhsGivenFXUVPK4BODYPK6SYSTEMid">
+<span id="_CPPv318AtmEscRhsGivenFXUVPK4BODYPK6SYSTEMid"></span><span id="_CPPv218AtmEscRhsGivenFXUVPK4BODYPK6SYSTEMid"></span><span id="AtmEscRhsGivenFXUV__BODYCP.SYSTEMCP.i.double"></span><span class="target" id="atmesc_8c_1abdbe5d13f88276d4692d51d5e0282890"></span><span class="n"><span class="pre">ATMESC_RHS</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">AtmEscRhsGivenFXUV</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="vplanet.html#_CPPv44BODY" title="BODY"><span class="n"><span class="pre">BODY</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">body</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="vplanet.html#_CPPv46SYSTEM" title="SYSTEM"><span class="n"><span class="pre">SYSTEM</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">system</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">iBody</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">dFXUV</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv418AtmEscRhsGivenFXUVPK4BODYPK6SYSTEMid" title="Link to this definition"></a><br /></dt>
+<dd><p>Pure atmospheric-escape RHS evaluation at a supplied XUV forcing.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>body</strong> – A pointer to the current <a class="reference internal" href="vplanet.html#struct_b_o_d_y"><span class="std std-ref">BODY</span></a> instance </p></li>
+<li><p><strong>system</strong> – A pointer to the current <a class="reference internal" href="vplanet.html#struct_s_y_s_t_e_m"><span class="std std-ref">SYSTEM</span></a> instance </p></li>
+<li><p><strong>iBody</strong> – The current body index </p></li>
+<li><p><strong>dFXUV</strong> – The XUV flux incident on the planet </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv421fdDSurfaceWaterMassDtP4BODYP6SYSTEMPi">
 <span id="_CPPv321fdDSurfaceWaterMassDtP4BODYP6SYSTEMPi"></span><span id="_CPPv221fdDSurfaceWaterMassDtP4BODYP6SYSTEMPi"></span><span id="fdDSurfaceWaterMassDt__BODYP.SYSTEMP.iP"></span><span class="target" id="atmesc_8c_1afc890cef45ccdf496503578eb071ca0b"></span><span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">fdDSurfaceWaterMassDt</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="vplanet.html#_CPPv44BODY" title="BODY"><span class="n"><span class="pre">BODY</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">body</span></span>, <a class="reference internal" href="vplanet.html#_CPPv46SYSTEM" title="SYSTEM"><span class="n"><span class="pre">SYSTEM</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">system</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">iaBody</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv421fdDSurfaceWaterMassDtP4BODYP6SYSTEMPi" title="Link to this definition"></a><br /></dt>
 <dd><p>The rate of change of the surface water mass.</p>
@@ -2380,6 +2539,34 @@ escape model.</p>
 </dd></dl>
 
 </div>
+<dl class="cpp struct">
+<dt class="sig sig-object cpp">
+<span class="target" id="struct_a_t_m_e_s_c___f_l_a_r_e_b_i_n___c_o_n_t_e_x_t"></span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ATMESC_FLAREBIN_CONTEXT</span></span></span><br /></dt>
+<dd><div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-members">Public Members</p>
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N23ATMESC_FLAREBIN_CONTEXT4bodyE">
+<span id="_CPPv3N23ATMESC_FLAREBIN_CONTEXT4bodyE"></span><span id="_CPPv2N23ATMESC_FLAREBIN_CONTEXT4bodyE"></span><span id="ATMESC_FLAREBIN_CONTEXT::body__BODYCP"></span><span class="target" id="struct_a_t_m_e_s_c___f_l_a_r_e_b_i_n___c_o_n_t_e_x_t_1a887e83e356e9960f60e13cba76974b10"></span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="vplanet.html#_CPPv44BODY" title="BODY"><span class="n"><span class="pre">BODY</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">body</span></span></span><a class="headerlink" href="#_CPPv4N23ATMESC_FLAREBIN_CONTEXT4bodyE" title="Link to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N23ATMESC_FLAREBIN_CONTEXT6systemE">
+<span id="_CPPv3N23ATMESC_FLAREBIN_CONTEXT6systemE"></span><span id="_CPPv2N23ATMESC_FLAREBIN_CONTEXT6systemE"></span><span id="ATMESC_FLAREBIN_CONTEXT::system__SYSTEMCP"></span><span class="target" id="struct_a_t_m_e_s_c___f_l_a_r_e_b_i_n___c_o_n_t_e_x_t_1a9634ed85625750026753d7d9a1a2989c"></span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="vplanet.html#_CPPv46SYSTEM" title="SYSTEM"><span class="n"><span class="pre">SYSTEM</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">system</span></span></span><a class="headerlink" href="#_CPPv4N23ATMESC_FLAREBIN_CONTEXT6systemE" title="Link to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N23ATMESC_FLAREBIN_CONTEXT5iBodyE">
+<span id="_CPPv3N23ATMESC_FLAREBIN_CONTEXT5iBodyE"></span><span id="_CPPv2N23ATMESC_FLAREBIN_CONTEXT5iBodyE"></span><span id="ATMESC_FLAREBIN_CONTEXT::iBody__i"></span><span class="target" id="struct_a_t_m_e_s_c___f_l_a_r_e_b_i_n___c_o_n_t_e_x_t_1a87ccce92456f548ae02837e7383a676a"></span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">iBody</span></span></span><a class="headerlink" href="#_CPPv4N23ATMESC_FLAREBIN_CONTEXT5iBodyE" title="Link to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N23ATMESC_FLAREBIN_CONTEXT10iComponentE">
+<span id="_CPPv3N23ATMESC_FLAREBIN_CONTEXT10iComponentE"></span><span id="_CPPv2N23ATMESC_FLAREBIN_CONTEXT10iComponentE"></span><span id="ATMESC_FLAREBIN_CONTEXT::iComponent__ATMESC_RHS_COMPONENT"></span><span class="target" id="struct_a_t_m_e_s_c___f_l_a_r_e_b_i_n___c_o_n_t_e_x_t_1aa16f937795a2c232668779e55286d302"></span><a class="reference internal" href="#_CPPv420ATMESC_RHS_COMPONENT" title="ATMESC_RHS_COMPONENT"><span class="n"><span class="pre">ATMESC_RHS_COMPONENT</span></span></a><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">iComponent</span></span></span><a class="headerlink" href="#_CPPv4N23ATMESC_FLAREBIN_CONTEXT10iComponentE" title="Link to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+</div>
+</dd></dl>
+
 </section>
 <section id="atmesc-h">
 <h2><a class="toc-backref" href="#id11" role="doc-backlink">atmesc.h</a><a class="headerlink" href="#atmesc-h" title="Link to this heading"></a></h2>
