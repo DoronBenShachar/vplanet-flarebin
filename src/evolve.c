@@ -55,6 +55,21 @@ void PropertiesAuxiliary(BODY *body, CONTROL *control, SYSTEM *system,
   }
 }
 
+static void FlareBinPrecomputeCached(BODY *body, CONTROL *control,
+                                     SYSTEM *system) {
+  int iBody;
+
+  for (iBody = 0; iBody < control->Evolve.iNumBodies; iBody++) {
+    if (body[iBody].bStellar && body[iBody].bFlareBin) {
+      /*
+       * Use stellar age as the deterministic evaluation marker so cache keys
+       * stay consistent with the body state seen by PropertiesAuxiliary.
+       */
+      fvFlareBinPrecompute(body, system, iBody, body[iBody].dAge);
+    }
+  }
+}
+
 void fvCumulative(BODY *body,CONTROL *control,SYSTEM *system,double dDt) {
   int iBody;
 
@@ -474,6 +489,7 @@ void RungeKutta4Step(BODY *body, CONTROL *control, SYSTEM *system,
 
   /* First midpoint derivative.*/
   PropertiesAuxiliary(evolve->tmpBody, control, system, update);
+  FlareBinPrecomputeCached(evolve->tmpBody, control, system);
 
   fdGetUpdateInfo(evolve->tmpBody, control, system, evolve->tmpUpdate,
                   fnUpdate);
@@ -522,6 +538,7 @@ void RungeKutta4Step(BODY *body, CONTROL *control, SYSTEM *system,
 
   /* Second midpoint derivative */
   PropertiesAuxiliary(evolve->tmpBody, control, system, update);
+  FlareBinPrecomputeCached(evolve->tmpBody, control, system);
 
   fdGetUpdateInfo(evolve->tmpBody, control, system, evolve->tmpUpdate,
                   fnUpdate);
@@ -570,6 +587,7 @@ void RungeKutta4Step(BODY *body, CONTROL *control, SYSTEM *system,
 
   /* Full step derivative */
   PropertiesAuxiliary(evolve->tmpBody, control, system, update);
+  FlareBinPrecomputeCached(evolve->tmpBody, control, system);
 
   fdGetUpdateInfo(evolve->tmpBody, control, system, evolve->tmpUpdate,
                   fnUpdate);
@@ -651,6 +669,7 @@ void Evolve(BODY *body, CONTROL *control, FILES *files, MODULE *module,
   }
 
   PropertiesAuxiliary(body, control, system, update);
+  FlareBinPrecomputeCached(body, control, system);
   control->Io.dNextOutput = control->Evolve.dTime + control->Io.dOutputTime;
 
   // Get derivatives at start, useful for logging
@@ -735,6 +754,7 @@ void Evolve(BODY *body, CONTROL *control, FILES *files, MODULE *module,
     /* Get auxiliary properties for next step -- first call
        was prior to loop. */
     PropertiesAuxiliary(body, control, system, update);
+    FlareBinPrecomputeCached(body, control, system);
 
   fvCumulative(body,control,system,dDt);
 
