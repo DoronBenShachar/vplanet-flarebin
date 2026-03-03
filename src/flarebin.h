@@ -135,4 +135,13 @@ double fdFlareTpl(double);
 double fdFlareTplIntegral(double, double);
 double fdFlareTplIntegralSq(double, double);
 
+/* FFD and conversion helpers */
+double fdFlareBinEnergyToXUV(const BODY *, int, double);
+double fdFlareBinDuration(const BODY *, int, double);
+double fdFlareBinRateDensity(const BODY *, int, double, double);
+void fvFlareBinNormalizeFfd(BODY *, int);
+double fdFlareBinPowerIntegrand(const BODY *, int, double, double);
+double fdFlareBinOverlapIntegrand(const BODY *, int, double, double);
+double fdFlareBinOverlapSupportIntegrand(const BODY *, int, double, double);
+
 /* @endcond */
