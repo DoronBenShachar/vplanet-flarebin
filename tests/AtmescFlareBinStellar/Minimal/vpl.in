@@ -1,0 +1,19 @@
+sSystemName                Minimal
+iVerbose                   0
+bOverwrite                 1
+saBodyFiles                tests/AtmescFlareBinStellar/Minimal/star.in tests/AtmescFlareBinStellar/Minimal/planet.in
+
+sUnitMass                  kg
+sUnitLength                m
+sUnitTime                  sec
+sUnitAngle                 d
+
+bDoLog                     1
+iDigits                    12
+dMinValue                  1e-10
+
+bDoForward                 1
+bVarDt                     1
+dEta                       0.01
+dStopTime                  3.15576e11
+dOutputTime                3.15576e11

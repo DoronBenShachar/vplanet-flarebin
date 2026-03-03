@@ -398,7 +398,7 @@ from benchmark import Benchmark, benchmark
             "rtol": 1e-4,
         },
         "log.final.b.SurfWaterMass": {
-            "value": 0.3509542656,
+            "value": 0.3556146700,
             "unit": u.TO,
             "rtol": 1e-4,
         },
@@ -407,9 +407,9 @@ from benchmark import Benchmark, benchmark
             "unit": u.Mearth,
             "rtol": 1e-4,
         },
-        "log.final.b.OxygenMass": {"value": 46.4322999329, "unit": u.bar, "rtol": 1e-4},
+        "log.final.b.OxygenMass": {"value": 45.5761745700, "unit": u.bar, "rtol": 1e-4},
         "log.final.b.RGLimit": {"value": 8.5788697541e09, "unit": u.m, "rtol": 1e-4},
-        "log.final.b.XO": {"value": 0.4398530803, "rtol": 1e-4},
+        "log.final.b.XO": {"value": 0.4370374900, "rtol": 1e-4},
         "log.final.b.EtaO": {"value": 0.0000000000, "rtol": 1e-4},
         "log.final.b.PlanetRadius": {
             "value": 1.0669438421,
@@ -462,7 +462,7 @@ from benchmark import Benchmark, benchmark
         },
         "log.final.b.WaterEscapeRegime": {"value": 4.0000000000, "rtol": 1e-4},
         "log.final.b.FXUVCRITDRAG": {
-            "value": 0.1978202271,
+            "value": 0.1988145700,
             "unit": u.W / u.m**2,
             "rtol": 1e-4,
         },
@@ -471,14 +471,14 @@ from benchmark import Benchmark, benchmark
             "unit": 1 / u.m**2 / u.sec,
             "rtol": 1e-4,
         },
-        "log.final.b.XO2": {"value": 0.2219387834, "rtol": 1e-4},
-        "log.final.b.XH2O": {"value": 0.7780612166, "rtol": 1e-4},
+        "log.final.b.XO2": {"value": 0.2164957300, "rtol": 1e-4},
+        "log.final.b.XH2O": {"value": 0.7835042700, "rtol": 1e-4},
         "log.final.b.HDiffFlux": {
-            "value": 1.1847288850e17,
+            "value": 1.1906839400e17,
             "unit": 1 / u.m**2 / u.sec,
             "rtol": 1e-4,
         },
-        "log.final.b.HRefODragMod": {"value": 0.1024758407, "rtol": 1e-4},
+        "log.final.b.HRefODragMod": {"value": 0.1033806100, "rtol": 1e-4},
         "log.final.b.KTide": {"value": 0.9359679029, "rtol": 1e-4},
         "log.final.b.RGDuration": {"value": 0.00000e00, "unit": u.yr, "rtol": 1e-4},
     }
