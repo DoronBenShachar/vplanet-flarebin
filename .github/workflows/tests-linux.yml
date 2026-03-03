@@ -52,6 +52,7 @@ jobs:
       - name: Publish test results
         uses: EnricoMi/publish-unit-test-result-action@v2
         if: always()
+        continue-on-error: true
         with:
           files: junit/test-*.xml
           check_name: Test Results (ubuntu-latest py${{ matrix.python-version }})
@@ -100,6 +101,7 @@ jobs:
       - name: Publish test results
         uses: EnricoMi/publish-unit-test-result-action@v2
         if: always()
+        continue-on-error: true
         with:
           files: junit/test-*.xml
           check_name: Nightly Test Results (ubuntu-latest py${{ matrix.python-version }})
