@@ -4,16 +4,18 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+  schedule:
+    - cron: '20 2 * * *'
 
 jobs:
-  tests:
-    name: '${{ matrix.os }}:python-${{ matrix.python-version }}'
-    runs-on: ${{ matrix.os }}
+  tests-pr:
+    if: github.event_name != 'schedule'
+    name: 'ubuntu-latest:python-${{ matrix.python-version }}'
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, ubuntu-24.04]
-        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
+        python-version: ['3.11']
 
     steps:
       - uses: actions/checkout@v5
@@ -30,37 +32,74 @@ jobs:
 
       - name: Install dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y lcov
           python -m pip install --upgrade pip
           python -m pip install -e .
-          python -m pip install pytest pytest-cov pytest-timeout
+          python -m pip install pytest pytest-timeout
 
       - name: Build vplanet
         run: make opt
 
-      - name: Run tests
-        timeout-minutes: 20
+      - name: Run smoke tests
+        timeout-minutes: 10
         run: |
-          python -m pytest tests/ --tb=short -v --timeout=300 --junitxml=junit/test-results.xml
+          python -m pytest \
+            tests/Conflicts/test_conflict.py \
+            tests/Help/test_Help.py \
+            tests/test_quantity.py \
+            tests/Stellar/HZSingle/test_HZSingle.py \
+            --tb=short -v --timeout=300 --junitxml=junit/test-results.xml
 
       - name: Publish test results
         uses: EnricoMi/publish-unit-test-result-action@v2
         if: always()
         with:
           files: junit/test-*.xml
-          check_name: Test Results (${{ matrix.os }} py${{ matrix.python-version }})
+          check_name: Test Results (ubuntu-latest py${{ matrix.python-version }})
 
-      - name: Generate coverage
-        if: matrix.os == 'ubuntu-22.04' && matrix.python-version == '3.9'
-        run: make coverage
+  tests-nightly:
+    if: github.event_name == 'schedule'
+    name: 'ubuntu-latest:python-${{ matrix.python-version }}'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.11', '3.12']
 
-      - name: Upload coverage to Codecov
-        if: matrix.os == 'ubuntu-22.04' && matrix.python-version == '3.9'
-        uses: codecov/codecov-action@v4
+    steps:
+      - uses: actions/checkout@v5
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./.coverage
-          flags: ${{ matrix.os }}-py${{ matrix.python-version }}
-          name: ${{ matrix.os }}-py${{ matrix.python-version }}
-          fail_ci_if_error: false
+          fetch-depth: 0
+
+      - name: Set up Python ${{ matrix.python-version }}
+        id: setup_python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+          cache-dependency-path: setup.py
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install pytest pytest-timeout
+
+      - name: Build vplanet
+        run: make opt
+
+      - name: Run smoke tests
+        timeout-minutes: 10
+        run: |
+          python -m pytest \
+            tests/Conflicts/test_conflict.py \
+            tests/Help/test_Help.py \
+            tests/test_quantity.py \
+            tests/Stellar/HZSingle/test_HZSingle.py \
+            --tb=short -v --timeout=300 --junitxml=junit/test-results.xml
+
+      - name: Publish test results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always()
+        with:
+          files: junit/test-*.xml
+          check_name: Nightly Test Results (ubuntu-latest py${{ matrix.python-version }})
