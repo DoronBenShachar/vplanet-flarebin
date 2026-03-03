@@ -310,15 +310,50 @@ void fvFlareBinPrecompute(BODY *body, SYSTEM *system, int iStar,
   dLbar = body[iStar].dLXUV;
   dLQ   = dLbar - dPStoch;
 
+  if (!isfinite(dLbar) || dLbar < 0) {
+    fprintf(stderr,
+            "ERROR: FLAREBIN invalid stellar mean XUV luminosity on body %d "
+            "(STELLAR dLXUV): LXUVMean=%.16e.\n",
+            iStar, dLbar);
+    exit(EXIT_FAILURE);
+  }
+
+  if (!isfinite(dPStoch) || dPStoch < 0) {
+    fprintf(stderr,
+            "ERROR: FLAREBIN invalid stochastic mean power on body %d: "
+            "P_stoch=%.16e.\n",
+            iStar, dPStoch);
+    exit(EXIT_FAILURE);
+  }
+
+  if (!isfinite(dMu) || dMu < 0) {
+    fprintf(stderr,
+            "ERROR: FLAREBIN invalid active-overlap mean on body %d: "
+            "mu=%.16e.\n",
+            iStar, dMu);
+    exit(EXIT_FAILURE);
+  }
+
+  if (!isfinite(dLQ)) {
+    fprintf(stderr,
+            "ERROR: FLAREBIN invalid quiescent luminosity on body %d: "
+            "L_q=%.16e.\n",
+            iStar, dLQ);
+    exit(EXIT_FAILURE);
+  }
+
   dNegTol = dConsTol * (1.0 + fabs(dLbar));
   if (dLQ < -dNegTol) {
     fprintf(stderr,
             "ERROR: FLAREBIN invalid configuration on body %d: "
-            "L_q = %.16e < 0 (Lbar=%.16e, P_stoch=%.16e).\n",
+            "L_q = %.16e < 0 (Lbar=%.16e, P_stoch=%.16e). "
+            "Check dFlareBinK/dFlareBinAlpha and energy bounds "
+            "(dFlareBinEStochMin, dFlareBinEmax, dFlareBinBandC, dFlareBinBandP).\n",
             iStar, dLQ, dLbar, dPStoch);
     exit(EXIT_FAILURE);
   }
   if (dLQ < 0) {
+    /* Roundoff-level negatives are floored to preserve L_q >= 0. */
     dLQ = 0;
   }
 

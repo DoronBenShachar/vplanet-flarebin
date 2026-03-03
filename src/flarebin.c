@@ -17,29 +17,41 @@ typedef struct {
   double dThreshold;
 } FLAREBINTHRESHCTX;
 
-static void fvFlareBinCopyArray(double **daDest, const double *daSrc, int iSize,
-                                 const char *cName) {
-  double *daTmp;
-  int i;
-
-  if (iSize <= 0 || daSrc == NULL) {
-    if (*daDest != NULL) {
-      free(*daDest);
-      *daDest = NULL;
-    }
+static void fvFlareBinVerifyNoAlias(const double *daDest, const double *daSrc,
+                                    int iSize, int iBody,
+                                    const char *cName) {
+  if (iSize <= 0 || daDest == NULL || daSrc == NULL) {
     return;
   }
 
-  daTmp = realloc(*daDest, iSize * sizeof(double));
-  if (daTmp == NULL) {
-    fprintf(stderr, "ERROR: FLAREBIN failed to allocate %s.\n", cName);
+  if (daDest == daSrc) {
+    fprintf(stderr,
+            "ERROR: FLAREBIN cache alias detected for %s on body %d. "
+            "tmpBody must own an independent buffer.\n",
+            cName, iBody);
     exit(EXIT_FAILURE);
   }
-  *daDest = daTmp;
+}
 
-  for (i = 0; i < iSize; i++) {
-    (*daDest)[i] = daSrc[i];
+static void fvFlareBinCopyArray(double **daDest, const double *daSrc, int iSize,
+                                 const char *cName) {
+  if (iSize <= 0) {
+    return;
   }
+
+  if (daSrc == NULL) {
+    fprintf(stderr, "ERROR: FLAREBIN source cache %s is NULL.\n", cName);
+    exit(EXIT_FAILURE);
+  }
+
+  if (*daDest == NULL) {
+    fprintf(stderr,
+            "ERROR: FLAREBIN destination cache %s was not initialized.\n",
+            cName);
+    exit(EXIT_FAILURE);
+  }
+
+  memcpy(*daDest, daSrc, iSize * sizeof(double));
 }
 
 static double *fdaFlareBinMallocArray(int iSize, const char *cName) {
@@ -60,6 +72,11 @@ static double *fdaFlareBinMallocArray(int iSize, const char *cName) {
 
 void BodyCopyFlareBin(BODY *dest, BODY *src, int foo, int iNumBodies,
                       int iBody) {
+  int iDestNE = dest[iBody].iFlareBinNEnergy;
+  int iDestNX = dest[iBody].iFlareBinNPhase;
+  int iSrcNE  = src[iBody].iFlareBinNEnergy;
+  int iSrcNX  = src[iBody].iFlareBinNPhase;
+
   (void)foo;
   (void)iNumBodies;
 
@@ -104,6 +121,41 @@ void BodyCopyFlareBin(BODY *dest, BODY *src, int foo, int iNumBodies,
   dest[iBody].dFlareBinDeltaX            = src[iBody].dFlareBinDeltaX;
   dest[iBody].dFlareBinLastPrecomputeAge = src[iBody].dFlareBinLastPrecomputeAge;
 
+  if (iDestNE != iSrcNE) {
+    fprintf(stderr,
+            "ERROR: FLAREBIN tmp cache size mismatch for energy quadrature on "
+            "body %d (dest=%d, src=%d).\n",
+            iBody, iDestNE, iSrcNE);
+    exit(EXIT_FAILURE);
+  }
+
+  if (iDestNX != iSrcNX) {
+    fprintf(stderr,
+            "ERROR: FLAREBIN tmp cache size mismatch for phase quadrature on "
+            "body %d (dest=%d, src=%d).\n",
+            iBody, iDestNX, iSrcNX);
+    exit(EXIT_FAILURE);
+  }
+
+  fvFlareBinVerifyNoAlias(dest[iBody].daFlareBinQuadU, src[iBody].daFlareBinQuadU,
+                          iSrcNE, iBody, "daFlareBinQuadU");
+  fvFlareBinVerifyNoAlias(dest[iBody].daFlareBinQuadWU,
+                          src[iBody].daFlareBinQuadWU, iSrcNE, iBody,
+                          "daFlareBinQuadWU");
+  fvFlareBinVerifyNoAlias(dest[iBody].daFlareBinQuadE, src[iBody].daFlareBinQuadE,
+                          iSrcNE, iBody, "daFlareBinQuadE");
+  fvFlareBinVerifyNoAlias(dest[iBody].daFlareBinQuadWE,
+                          src[iBody].daFlareBinQuadWE, iSrcNE, iBody,
+                          "daFlareBinQuadWE");
+  fvFlareBinVerifyNoAlias(dest[iBody].daFlareBinQuadX, src[iBody].daFlareBinQuadX,
+                          iSrcNX, iBody, "daFlareBinQuadX");
+  fvFlareBinVerifyNoAlias(dest[iBody].daFlareBinQuadWX,
+                          src[iBody].daFlareBinQuadWX, iSrcNX, iBody,
+                          "daFlareBinQuadWX");
+  fvFlareBinVerifyNoAlias(dest[iBody].daFlareBinTplAtX,
+                          src[iBody].daFlareBinTplAtX, iSrcNX, iBody,
+                          "daFlareBinTplAtX");
+
   fvFlareBinCopyArray(&dest[iBody].daFlareBinQuadU, src[iBody].daFlareBinQuadU,
                       dest[iBody].iFlareBinNEnergy, "daFlareBinQuadU");
   fvFlareBinCopyArray(&dest[iBody].daFlareBinQuadWU,
@@ -133,6 +185,19 @@ static void fvFlareBinOptionError(CONTROL *control, FILES *files, OPTIONS *optio
     iLine = 0;
   }
   LineExit(files->Infile[iFile].cIn, iLine);
+}
+
+static void fvFlareBinRequireFinite(CONTROL *control, FILES *files,
+                                    OPTIONS *options, int iFile, int iLine,
+                                    const char *cName, double dValue) {
+  char cMsg[256];
+
+  if (isfinite(dValue)) {
+    return;
+  }
+
+  snprintf(cMsg, sizeof(cMsg), "must be finite (%s=%.16e).", cName, dValue);
+  fvFlareBinOptionError(control, files, options, iFile, iLine, cMsg);
 }
 
 static int fbReadFlareBinInt(CONTROL *control, FILES *files, OPTIONS *options,
@@ -985,6 +1050,31 @@ void VerifyFlareBin(BODY *body, CONTROL *control, FILES *files, OPTIONS *options
                           "cannot be used with module FLARE on the same body.");
   }
 
+  fvFlareBinRequireFinite(control, files, &options[OPT_FLAREBINEMIN], iFile,
+                          options[OPT_FLAREBINEMIN].iLine[iFile],
+                          "dFlareBinEmin", body[iBody].dFlareBinEmin);
+  fvFlareBinRequireFinite(control, files, &options[OPT_FLAREBINEMAX], iFile,
+                          options[OPT_FLAREBINEMAX].iLine[iFile],
+                          "dFlareBinEmax", body[iBody].dFlareBinEmax);
+  fvFlareBinRequireFinite(control, files, &options[OPT_FLAREBINESTOCHMIN], iFile,
+                          options[OPT_FLAREBINESTOCHMIN].iLine[iFile],
+                          "dFlareBinEStochMin", body[iBody].dFlareBinEStochMin);
+  fvFlareBinRequireFinite(control, files, &options[OPT_FLAREBINXMIN], iFile,
+                          options[OPT_FLAREBINXMIN].iLine[iFile],
+                          "dFlareBinXMin", body[iBody].dFlareBinXMin);
+  fvFlareBinRequireFinite(control, files, &options[OPT_FLAREBINXEND], iFile,
+                          options[OPT_FLAREBINXEND].iLine[iFile],
+                          "dFlareBinXEnd", body[iBody].dFlareBinXEnd);
+  fvFlareBinRequireFinite(control, files, &options[OPT_FLAREBINTAU0], iFile,
+                          options[OPT_FLAREBINTAU0].iLine[iFile],
+                          "dFlareBinTau0", body[iBody].dFlareBinTau0);
+  fvFlareBinRequireFinite(control, files, &options[OPT_FLAREBINDURE0], iFile,
+                          options[OPT_FLAREBINDURE0].iLine[iFile],
+                          "dFlareBinDurE0", body[iBody].dFlareBinDurE0);
+  fvFlareBinRequireFinite(control, files, &options[OPT_FLAREBINDUREXP], iFile,
+                          options[OPT_FLAREBINDUREXP].iLine[iFile],
+                          "dFlareBinDurExp", body[iBody].dFlareBinDurExp);
+
   if (body[iBody].dFlareBinEmax <= body[iBody].dFlareBinEmin) {
     iLine = options[OPT_FLAREBINEMAX].iLine[iFile];
     if (iLine < 0) {
@@ -1187,18 +1277,60 @@ void InitializeBodyFlareBin(BODY *body, CONTROL *control, UPDATE *update,
 
 void InitializeUpdateTmpBodyFlareBin(BODY *body, CONTROL *control, UPDATE *update,
                                      int iBody) {
-  (void)body;
+  int iNE;
+  int iNX;
+  BODY *tmpBody;
+
   (void)update;
 
-  control->Evolve.tmpBody[iBody].iFlareBinNEnergy = 0;
-  control->Evolve.tmpBody[iBody].iFlareBinNPhase  = 0;
-  control->Evolve.tmpBody[iBody].daFlareBinQuadU  = NULL;
-  control->Evolve.tmpBody[iBody].daFlareBinQuadWU = NULL;
-  control->Evolve.tmpBody[iBody].daFlareBinQuadE  = NULL;
-  control->Evolve.tmpBody[iBody].daFlareBinQuadWE = NULL;
-  control->Evolve.tmpBody[iBody].daFlareBinQuadX  = NULL;
-  control->Evolve.tmpBody[iBody].daFlareBinQuadWX = NULL;
-  control->Evolve.tmpBody[iBody].daFlareBinTplAtX = NULL;
+  tmpBody = &control->Evolve.tmpBody[iBody];
+
+  iNE = body[iBody].iFlareBinNEnergy;
+  iNX = body[iBody].iFlareBinNPhase;
+
+  if (iNE < 0 || iNX < 0) {
+    fprintf(stderr,
+            "ERROR: FLAREBIN invalid tmp cache sizes on body %d (NE=%d, NX=%d).\n",
+            iBody, iNE, iNX);
+    exit(EXIT_FAILURE);
+  }
+
+  if (iNE > 0 &&
+      (body[iBody].daFlareBinQuadU == NULL ||
+       body[iBody].daFlareBinQuadWU == NULL ||
+       body[iBody].daFlareBinQuadE == NULL ||
+       body[iBody].daFlareBinQuadWE == NULL)) {
+    fprintf(stderr,
+            "ERROR: FLAREBIN source energy cache missing before tmpBody init on "
+            "body %d.\n",
+            iBody);
+    exit(EXIT_FAILURE);
+  }
+
+  if (iNX > 0 &&
+      (body[iBody].daFlareBinQuadX == NULL ||
+       body[iBody].daFlareBinQuadWX == NULL ||
+       body[iBody].daFlareBinTplAtX == NULL)) {
+    fprintf(stderr,
+            "ERROR: FLAREBIN source phase cache missing before tmpBody init on "
+            "body %d.\n",
+            iBody);
+    exit(EXIT_FAILURE);
+  }
+
+  tmpBody->iFlareBinNEnergy = iNE;
+  tmpBody->iFlareBinNPhase  = iNX;
+  tmpBody->daFlareBinQuadU  = fdaFlareBinMallocArray(iNE, "tmp daFlareBinQuadU");
+  tmpBody->daFlareBinQuadWU =
+      fdaFlareBinMallocArray(iNE, "tmp daFlareBinQuadWU");
+  tmpBody->daFlareBinQuadE  = fdaFlareBinMallocArray(iNE, "tmp daFlareBinQuadE");
+  tmpBody->daFlareBinQuadWE =
+      fdaFlareBinMallocArray(iNE, "tmp daFlareBinQuadWE");
+  tmpBody->daFlareBinQuadX  = fdaFlareBinMallocArray(iNX, "tmp daFlareBinQuadX");
+  tmpBody->daFlareBinQuadWX =
+      fdaFlareBinMallocArray(iNX, "tmp daFlareBinQuadWX");
+  tmpBody->daFlareBinTplAtX =
+      fdaFlareBinMallocArray(iNX, "tmp daFlareBinTplAtX");
 }
 
 void InitializeUpdateFlareBin(BODY *body, UPDATE *update, int iBody) {
