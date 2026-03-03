@@ -183,6 +183,10 @@ void FinalizeUpdateMassAtmEsc(BODY *, UPDATE *, int *, int, int, int);
 #define OUT_HREFODRAGMOD                                                       \
   1239 /**< Multiply by H ref flux to get H flux with drag of oxgyen */
 #define OUT_KTIDE 1240 /**< Gravitational enhancement of mass loss */
+#define OUT_MDOTXUVMEANFORCING                                                 \
+  1241 /**< Envelope mass-loss rate at mean XUV forcing */
+#define OUT_MDOTXUVEFFECTIVE                                                   \
+  1242 /**< Effective-averaged envelope mass-loss rate */
 #define OUT_CUMULATIVEFXUV 1250
 #define OUT_RGFLUX                                                             \
   1260 /**< Incident bolometric flux to trigger a runaway greenhouse */
@@ -215,6 +219,10 @@ void WriteRRCriticalFlux(BODY *, CONTROL *, OUTPUT *, SYSTEM *, UNITS *,
                          UPDATE *, int, double *, char **);
 void WriteHEscapeRegime(BODY *, CONTROL *, OUTPUT *, SYSTEM *, UNITS *,
                         UPDATE *, int, double *, char **);
+void WriteMdotXUVMeanForcing(BODY *, CONTROL *, OUTPUT *, SYSTEM *, UNITS *,
+                             UPDATE *, int, double *, char **);
+void WriteMdotXUVEffective(BODY *, CONTROL *, OUTPUT *, SYSTEM *, UNITS *,
+                           UPDATE *, int, double *, char **);
 
 /* Logging Functions */
 void LogOptionsAtmEsc(CONTROL *, FILE *);
@@ -227,6 +235,18 @@ void LogBodyAtmEsc(BODY *, CONTROL *, OUTPUT *, SYSTEM *, UPDATE *,
 void fnForceBehaviorAtmEsc(BODY *, MODULE *, EVOLVE *, IO *, SYSTEM *, UPDATE *,
                            fnUpdateVariable ***, int, int);
 void fnPropsAuxAtmEsc(BODY *, EVOLVE *, IO *, UPDATE *, int);
+
+typedef struct ATMESC_RHS {
+  double dSurfaceWaterMassDt;
+  double dOxygenMassDt;
+  double dOxygenMantleMassDt;
+  double dEnvelopeMassDt;
+  double dEnvelopeMassDtBondiLimited;
+  double dEnvelopeMassDtRRLimited;
+} ATMESC_RHS;
+
+ATMESC_RHS AtmEscRhsGivenFXUV(const BODY *body, const SYSTEM *system,
+                              int iBody, double dFXUV);
 
 double fdDSurfaceWaterMassDt(BODY *, SYSTEM *, int *);
 double fdDEnvelopeMassDt(BODY *, SYSTEM *, int *);
