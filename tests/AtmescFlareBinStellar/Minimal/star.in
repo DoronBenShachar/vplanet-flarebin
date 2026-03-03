@@ -1,0 +1,43 @@
+sName                      star
+saModules                  stellar flarebin
+
+# Stellar parameters
+dMass                      2.3860992e29
+dAge                       3.15576e14
+dRotPeriod                 86400
+sStellarModel              baraffe
+dSatXUVFrac                1e-3
+dRadGyra                   0.5
+
+# Flarebin controls (deterministic quadrature, no RNG)
+iFlareBinSeed              0
+iFlareBinQuadNE            8
+iFlareBinQuadNX            8
+iFlareBinMaxOverlapN       1
+dFlareBinOverlapTol        1e-3
+
+sFlareBinDist              POWERLAW_FFD
+sFlareBinNormMode          NORM_FROM_FFD
+sFlareBinBandPass          XUV
+
+dFlareBinEmin              1.0e26
+dFlareBinEStochMin         1.0e27
+dFlareBinEmax              1.0e29
+
+dFlareBinAlpha             2.0
+dFlareBinK                 2.0e17
+
+dFlareBinTau0              1000
+dFlareBinDurE0             1.0e27
+dFlareBinDurExp            0.0
+
+dFlareBinXMin              -1.0
+dFlareBinXEnd              20.0
+
+dFlareBinBandC             1.0
+dFlareBinBandP             1.0
+
+dFlareBinFXUVThresh1       10.0
+dFlareBinFXUVThresh2       20.0
+
+saOutputOrder              Time LXUVMean LXUVQuiescent FlareBinPStoch

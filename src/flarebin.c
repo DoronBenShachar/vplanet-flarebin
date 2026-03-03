@@ -1548,7 +1548,7 @@ void InitializeOutputFlareBin(OUTPUT *output, fnWriteOutput fnWrite[]) {
   output[OUT_FLAREBINFXUVMEAN].bNeg       = 1;
   output[OUT_FLAREBINFXUVMEAN].dNeg       = 1;
   output[OUT_FLAREBINFXUVMEAN].iNum       = 1;
-  output[OUT_FLAREBINFXUVMEAN].iModuleBit = FLAREBIN;
+  output[OUT_FLAREBINFXUVMEAN].iModuleBit = 1;
   fnWrite[OUT_FLAREBINFXUVMEAN]           = &WriteFXUVMeanFlareBin;
 
   fvFormattedString(&output[OUT_FLAREBINFXUVQUIESCENT].cName, "FXUVQuiescent");
@@ -1558,7 +1558,7 @@ void InitializeOutputFlareBin(OUTPUT *output, fnWriteOutput fnWrite[]) {
   output[OUT_FLAREBINFXUVQUIESCENT].bNeg       = 1;
   output[OUT_FLAREBINFXUVQUIESCENT].dNeg       = 1;
   output[OUT_FLAREBINFXUVQUIESCENT].iNum       = 1;
-  output[OUT_FLAREBINFXUVQUIESCENT].iModuleBit = FLAREBIN;
+  output[OUT_FLAREBINFXUVQUIESCENT].iModuleBit = 1;
   fnWrite[OUT_FLAREBINFXUVQUIESCENT]           = &WriteFXUVQuiescentFlareBin;
 
   fvFormattedString(&output[OUT_FLAREBINPFXUVABOVE1].cName,
@@ -1567,7 +1567,7 @@ void InitializeOutputFlareBin(OUTPUT *output, fnWriteOutput fnWrite[]) {
                     "P(FXUV > dFlareBinFXUVThresh1); -1 when threshold < 0");
   output[OUT_FLAREBINPFXUVABOVE1].bNeg       = 0;
   output[OUT_FLAREBINPFXUVABOVE1].iNum       = 1;
-  output[OUT_FLAREBINPFXUVABOVE1].iModuleBit = FLAREBIN;
+  output[OUT_FLAREBINPFXUVABOVE1].iModuleBit = 1;
   fnWrite[OUT_FLAREBINPFXUVABOVE1]           = &WriteFlareBinPFXUVAbove1;
 
   fvFormattedString(&output[OUT_FLAREBINPFXUVABOVE2].cName,
@@ -1576,7 +1576,7 @@ void InitializeOutputFlareBin(OUTPUT *output, fnWriteOutput fnWrite[]) {
                     "P(FXUV > dFlareBinFXUVThresh2); -1 when threshold < 0");
   output[OUT_FLAREBINPFXUVABOVE2].bNeg       = 0;
   output[OUT_FLAREBINPFXUVABOVE2].iNum       = 1;
-  output[OUT_FLAREBINPFXUVABOVE2].iModuleBit = FLAREBIN;
+  output[OUT_FLAREBINPFXUVABOVE2].iModuleBit = 1;
   fnWrite[OUT_FLAREBINPFXUVABOVE2]           = &WriteFlareBinPFXUVAbove2;
 }
 

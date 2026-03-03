@@ -1,0 +1,20 @@
+sName                      planet
+saModules                  atmesc
+
+# Physical/orbital properties
+dMass                      7.58467622e24
+dEcc                       0.08
+dSemi                      7.2554967289e9
+
+# ATMESC parameters
+dXFrac                     1.0
+dSurfWaterMass             2.085e21
+dEnvelopeMass              5.9722e21
+bHaltSurfaceDesiccated     0
+bHaltEnvelopeGone          0
+dMinSurfWaterMass          1.0e16
+dMinEnvelopeMass           1.0e16
+sPlanetRadiusModel         proximacenb
+bAtmEscAuto                1
+
+saOutputOrder              Time SurfWaterMass EnvelopeMass OxygenMass PlanetRadius FXUV FXUVMean FXUVQuiescent FlareBinPFXUVAbove1 FlareBinPFXUVAbove2 Mdot_XUV_MeanForcing Mdot_XUV_Effective
