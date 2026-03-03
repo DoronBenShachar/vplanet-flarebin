@@ -52,6 +52,7 @@
 #define SPINBODY 4096
 #define DISTRES 8192
 #define MAGMOC 16384
+#define FLAREBIN 32768
 
 /* Fundamental constants; Some of these are taken from the IAU working
  group on Fundamental constants, as described in Prsa et al. 2016. */
@@ -898,6 +899,16 @@ struct BODY {
   double *daFFD;
   double *daLXUVFlare;
 
+  // FLAREBIN
+  int bFlareBin;
+  int iFlareBinNEnergy;
+  int iFlareBinNPhase;
+  int iFlareBinNMax;
+  double dFlareBinEStochMin;
+  double dFlareBinLQ;
+  double dFlareBinPStoch;
+  double dFlareBinMu;
+  double dFlareBinITpl;
 
   // GALHABIT
   int bGalHabit;        /**< Use galhabit module */
@@ -1897,10 +1908,11 @@ depends on the total number of modules available. */
  * BINARY: 2100 - 2200
  * GALHABIT: 2200 - 2300
  * MAGMOC: 2300 - 2400
+ * FLAREBIN: 2400 - 2500
  */
 // These need to be set to the largest previous limit
-#define MODULEOPTEND 2400
-#define MODULEOUTEND 2400
+#define MODULEOPTEND 2500
+#define MODULEOUTEND 2500
 
 /* The INFILE struct contains all the information
  * regarding the files that read in. */
@@ -2185,6 +2197,7 @@ struct MODULE {
   int *iaPoise;
   int *iaBinary;
   int *iaFlare;
+  int *iaFlareBin;
   int *iaGalHabit;
   int *iaSpiNBody;
   int *iaMagmOc;
@@ -2393,6 +2406,7 @@ typedef void (*fnIntegrate)(BODY *, CONTROL *, SYSTEM *, UPDATE *,
 #include "distrot.h"
 #include "eqtide.h"
 #include "flare.h"
+#include "flarebin.h"
 #include "galhabit.h"
 #include "magmoc.h"
 #include "poise.h"
