@@ -1025,9 +1025,151 @@ void VerifyHaltFlareBin(BODY *body, CONTROL *control, OPTIONS *options,
   (void)iHalt;
 }
 
+/* Until flarebin precompute is implemented, these writers report cached BODY
+ * fields that are initialized deterministically (typically 0). */
+static void WriteLXUVMeanFlareBin(BODY *body, CONTROL *control, OUTPUT *output,
+                                  SYSTEM *system, UNITS *units, UPDATE *update,
+                                  int iBody, double *dTmp, char **cUnit) {
+  *dTmp = body[iBody].dLXUV;
+
+  if (output->bDoNeg[iBody]) {
+    *dTmp *= output->dNeg;
+    fvFormattedString(cUnit, output->cNeg);
+  } else {
+    *dTmp /= fdUnitsPower(units->iTime, units->iMass, units->iLength);
+    fsUnitsPower(units, cUnit);
+  }
+}
+
+static void WriteLXUVQuiescentFlareBin(BODY *body, CONTROL *control,
+                                       OUTPUT *output, SYSTEM *system,
+                                       UNITS *units, UPDATE *update, int iBody,
+                                       double *dTmp, char **cUnit) {
+  *dTmp = body[iBody].dFlareBinLQ;
+
+  if (output->bDoNeg[iBody]) {
+    *dTmp *= output->dNeg;
+    fvFormattedString(cUnit, output->cNeg);
+  } else {
+    *dTmp /= fdUnitsPower(units->iTime, units->iMass, units->iLength);
+    fsUnitsPower(units, cUnit);
+  }
+}
+
+static void WriteFlareBinPStoch(BODY *body, CONTROL *control, OUTPUT *output,
+                                SYSTEM *system, UNITS *units, UPDATE *update,
+                                int iBody, double *dTmp, char **cUnit) {
+  *dTmp = body[iBody].dFlareBinPStoch;
+
+  if (output->bDoNeg[iBody]) {
+    *dTmp *= output->dNeg;
+    fvFormattedString(cUnit, output->cNeg);
+  } else {
+    *dTmp /= fdUnitsPower(units->iTime, units->iMass, units->iLength);
+    fsUnitsPower(units, cUnit);
+  }
+}
+
+static void WriteFlareBinMuActive(BODY *body, CONTROL *control, OUTPUT *output,
+                                  SYSTEM *system, UNITS *units, UPDATE *update,
+                                  int iBody, double *dTmp, char **cUnit) {
+  *dTmp = body[iBody].dFlareBinMu;
+  fvFormattedString(cUnit, "");
+}
+
+static void WriteFlareBinPAnyActive(BODY *body, CONTROL *control, OUTPUT *output,
+                                    SYSTEM *system, UNITS *units, UPDATE *update,
+                                    int iBody, double *dTmp, char **cUnit) {
+  *dTmp = 1.0 - exp(-body[iBody].dFlareBinMu);
+  fvFormattedString(cUnit, "");
+}
+
+static void WriteFlareBinEStochMin(BODY *body, CONTROL *control, OUTPUT *output,
+                                   SYSTEM *system, UNITS *units, UPDATE *update,
+                                   int iBody, double *dTmp, char **cUnit) {
+  *dTmp = body[iBody].dFlareBinEStochMin;
+
+  if (output->bDoNeg[iBody]) {
+    *dTmp *= output->dNeg;
+    fvFormattedString(cUnit, output->cNeg);
+  } else {
+    *dTmp /= fdUnitsEnergy(units->iTime, units->iMass, units->iLength);
+    fsUnitsEnergy(units, cUnit);
+  }
+}
+
+static void WriteFlareBinITemplate(BODY *body, CONTROL *control, OUTPUT *output,
+                                   SYSTEM *system, UNITS *units, UPDATE *update,
+                                   int iBody, double *dTmp, char **cUnit) {
+  *dTmp = body[iBody].dFlareBinITpl;
+  fvFormattedString(cUnit, "");
+}
+
 void InitializeOutputFlareBin(OUTPUT *output, fnWriteOutput fnWrite[]) {
-  (void)output;
-  (void)fnWrite;
+  fvFormattedString(&output[OUT_FLAREBINLXUVMEAN].cName, "LXUVMean");
+  fvFormattedString(&output[OUT_FLAREBINLXUVMEAN].cDescr,
+                    "Baseline stellar XUV luminosity (alias of STELLAR dLXUV)");
+  fvFormattedString(&output[OUT_FLAREBINLXUVMEAN].cNeg, "LSUN");
+  output[OUT_FLAREBINLXUVMEAN].bNeg       = 1;
+  output[OUT_FLAREBINLXUVMEAN].dNeg       = 1. / LSUN;
+  output[OUT_FLAREBINLXUVMEAN].iNum       = 1;
+  output[OUT_FLAREBINLXUVMEAN].iModuleBit = FLAREBIN;
+  fnWrite[OUT_FLAREBINLXUVMEAN]           = &WriteLXUVMeanFlareBin;
+
+  fvFormattedString(&output[OUT_FLAREBINLXUVQUIESCENT].cName, "LXUVQuiescent");
+  fvFormattedString(&output[OUT_FLAREBINLXUVQUIESCENT].cDescr,
+                    "Flarebin quiescent XUV luminosity L_q");
+  fvFormattedString(&output[OUT_FLAREBINLXUVQUIESCENT].cNeg, "LSUN");
+  output[OUT_FLAREBINLXUVQUIESCENT].bNeg       = 1;
+  output[OUT_FLAREBINLXUVQUIESCENT].dNeg       = 1. / LSUN;
+  output[OUT_FLAREBINLXUVQUIESCENT].iNum       = 1;
+  output[OUT_FLAREBINLXUVQUIESCENT].iModuleBit = FLAREBIN;
+  fnWrite[OUT_FLAREBINLXUVQUIESCENT]           = &WriteLXUVQuiescentFlareBin;
+
+  fvFormattedString(&output[OUT_FLAREBINPSTOCH].cName, "FlareBinPStoch");
+  fvFormattedString(&output[OUT_FLAREBINPSTOCH].cDescr,
+                    "Flarebin stochastic mean power P_stoch");
+  fvFormattedString(&output[OUT_FLAREBINPSTOCH].cNeg, "LSUN");
+  output[OUT_FLAREBINPSTOCH].bNeg       = 1;
+  output[OUT_FLAREBINPSTOCH].dNeg       = 1. / LSUN;
+  output[OUT_FLAREBINPSTOCH].iNum       = 1;
+  output[OUT_FLAREBINPSTOCH].iModuleBit = FLAREBIN;
+  fnWrite[OUT_FLAREBINPSTOCH]           = &WriteFlareBinPStoch;
+
+  fvFormattedString(&output[OUT_FLAREBINMUACTIVE].cName, "FlareBinMuActive");
+  fvFormattedString(&output[OUT_FLAREBINMUACTIVE].cDescr,
+                    "Flarebin expected active flare count mu");
+  output[OUT_FLAREBINMUACTIVE].bNeg       = 0;
+  output[OUT_FLAREBINMUACTIVE].iNum       = 1;
+  output[OUT_FLAREBINMUACTIVE].iModuleBit = FLAREBIN;
+  fnWrite[OUT_FLAREBINMUACTIVE]           = &WriteFlareBinMuActive;
+
+  fvFormattedString(&output[OUT_FLAREBINPANYACTIVE].cName,
+                    "FlareBinPAnyActive");
+  fvFormattedString(&output[OUT_FLAREBINPANYACTIVE].cDescr,
+                    "Flarebin probability at least one flare is active");
+  output[OUT_FLAREBINPANYACTIVE].bNeg       = 0;
+  output[OUT_FLAREBINPANYACTIVE].iNum       = 1;
+  output[OUT_FLAREBINPANYACTIVE].iModuleBit = FLAREBIN;
+  fnWrite[OUT_FLAREBINPANYACTIVE]           = &WriteFlareBinPAnyActive;
+
+  fvFormattedString(&output[OUT_FLAREBINESTOCHMIN].cName, "FlareBinEStochMin");
+  fvFormattedString(&output[OUT_FLAREBINESTOCHMIN].cDescr,
+                    "Flarebin stochastic lower energy bound EStochMin");
+  fvFormattedString(&output[OUT_FLAREBINESTOCHMIN].cNeg, "ergs");
+  output[OUT_FLAREBINESTOCHMIN].bNeg       = 1;
+  output[OUT_FLAREBINESTOCHMIN].dNeg       = 1.0e7;
+  output[OUT_FLAREBINESTOCHMIN].iNum       = 1;
+  output[OUT_FLAREBINESTOCHMIN].iModuleBit = FLAREBIN;
+  fnWrite[OUT_FLAREBINESTOCHMIN]           = &WriteFlareBinEStochMin;
+
+  fvFormattedString(&output[OUT_FLAREBINITEMPLATE].cName, "FlareBinItemplate");
+  fvFormattedString(&output[OUT_FLAREBINITEMPLATE].cDescr,
+                    "Flarebin template integral I_tpl");
+  output[OUT_FLAREBINITEMPLATE].bNeg       = 0;
+  output[OUT_FLAREBINITEMPLATE].iNum       = 1;
+  output[OUT_FLAREBINITEMPLATE].iModuleBit = FLAREBIN;
+  fnWrite[OUT_FLAREBINITEMPLATE]           = &WriteFlareBinITemplate;
 }
 
 void LogOptionsFlareBin(CONTROL *control, FILE *fp) {
