@@ -1,0 +1,14 @@
+flarebin
+========
+
+**Contents**
+
+.. contents:: :local:
+
+flarebin.c
+----------
+.. autodoxygenfile:: flarebin.c
+
+flarebin.h
+----------
+.. autodoxygenfile:: flarebin.h
