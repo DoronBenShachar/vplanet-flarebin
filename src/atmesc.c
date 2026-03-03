@@ -3004,6 +3004,85 @@ void WriteDEnvMassDt(BODY *body, CONTROL *control, OUTPUT *output,
   }
 }
 
+static double fdAtmEscEnvelopeMdotFromRhs(const BODY *body, int iBody,
+                                          const ATMESC_RHS *rhs) {
+  if (body[iBody].dEnvelopeMass < body[iBody].dMinEnvelopeMass) {
+    return 0;
+  }
+
+  if (body[iBody].iHEscapeRegime == ATMESC_BONDILIM) {
+    return rhs->dEnvelopeMassDtBondiLimited;
+  }
+  if (body[iBody].iHEscapeRegime == ATMESC_RRLIM) {
+    return rhs->dEnvelopeMassDtRRLimited;
+  }
+  if (body[iBody].iHEscapeRegime == ATMESC_BALLISTIC ||
+      body[iBody].iHEscapeRegime == ATMESC_NONE) {
+    return 0;
+  }
+  return rhs->dEnvelopeMassDt;
+}
+
+/**
+Logs the envelope mass-loss rate using mean XUV forcing.
+
+@param body A pointer to the current BODY instance
+@param control A pointer to the current CONTROL instance
+@param output A pointer to the current OUTPUT instance
+@param system A pointer to the current SYSTEM instance
+@param units A pointer to the current UNITS instance
+@param update A pointer to the current UPDATE instance
+@param iBody The current body Number
+@param dTmp Temporary variable used for unit conversions
+@param cUnit The unit for this variable
+*/
+void WriteMdotXUVMeanForcing(BODY *body, CONTROL *control, OUTPUT *output,
+                             SYSTEM *system, UNITS *units, UPDATE *update,
+                             int iBody, double *dTmp, char **cUnit) {
+  double dFXUVMean = body[iBody].dFXUV;
+  ATMESC_RHS rhs;
+
+  if (iBody > 0 && body[0].bStellar && body[0].bFlareBin) {
+    dFXUVMean = fdFlareBinMeanFXUV(body, system, 0, iBody);
+  }
+
+  rhs   = AtmEscRhsGivenFXUV(body, system, iBody, dFXUVMean);
+  *dTmp = fdAtmEscEnvelopeMdotFromRhs(body, iBody, &rhs);
+
+  if (output->bDoNeg[iBody]) {
+    *dTmp *= output->dNeg;
+    fvFormattedString(cUnit, output->cNeg);
+  } else {
+    fvFormattedString(cUnit, "kg/s");
+  }
+}
+
+/**
+Logs the deterministic effective-averaged envelope mass-loss rate.
+
+@param body A pointer to the current BODY instance
+@param control A pointer to the current CONTROL instance
+@param output A pointer to the current OUTPUT instance
+@param system A pointer to the current SYSTEM instance
+@param units A pointer to the current UNITS instance
+@param update A pointer to the current UPDATE instance
+@param iBody The current body Number
+@param dTmp Temporary variable used for unit conversions
+@param cUnit The unit for this variable
+*/
+void WriteMdotXUVEffective(BODY *body, CONTROL *control, OUTPUT *output,
+                           SYSTEM *system, UNITS *units, UPDATE *update,
+                           int iBody, double *dTmp, char **cUnit) {
+  *dTmp = *(update[iBody].pdDEnvelopeMassDtAtmesc);
+
+  if (output->bDoNeg[iBody]) {
+    *dTmp *= output->dNeg;
+    fvFormattedString(cUnit, output->cNeg);
+  } else {
+    fvFormattedString(cUnit, "kg/s");
+  }
+}
+
 /**
 Logs the thermospheric temperature.
 
@@ -3681,6 +3760,27 @@ void InitializeOutputAtmEsc(OUTPUT *output, fnWriteOutput fnWrite[]) {
   output[OUT_DENVMASSDT].iNum       = 1;
   output[OUT_DENVMASSDT].iModuleBit = ATMESC;
   fnWrite[OUT_DENVMASSDT]           = &WriteDEnvMassDt;
+
+  fvFormattedString(&output[OUT_MDOTXUVMEANFORCING].cName,
+                    "Mdot_XUV_MeanForcing");
+  fvFormattedString(&output[OUT_MDOTXUVMEANFORCING].cDescr,
+                    "Envelope mass-loss rate at mean XUV forcing");
+  fvFormattedString(&output[OUT_MDOTXUVMEANFORCING].cNeg, "Mearth/Myr");
+  output[OUT_MDOTXUVMEANFORCING].bNeg       = 1;
+  output[OUT_MDOTXUVMEANFORCING].dNeg       = (YEARSEC * 1e6) / MEARTH;
+  output[OUT_MDOTXUVMEANFORCING].iNum       = 1;
+  output[OUT_MDOTXUVMEANFORCING].iModuleBit = ATMESC;
+  fnWrite[OUT_MDOTXUVMEANFORCING]           = &WriteMdotXUVMeanForcing;
+
+  fvFormattedString(&output[OUT_MDOTXUVEFFECTIVE].cName, "Mdot_XUV_Effective");
+  fvFormattedString(&output[OUT_MDOTXUVEFFECTIVE].cDescr,
+                    "Deterministic effective-averaged envelope mass-loss rate");
+  fvFormattedString(&output[OUT_MDOTXUVEFFECTIVE].cNeg, "Mearth/Myr");
+  output[OUT_MDOTXUVEFFECTIVE].bNeg       = 1;
+  output[OUT_MDOTXUVEFFECTIVE].dNeg       = (YEARSEC * 1e6) / MEARTH;
+  output[OUT_MDOTXUVEFFECTIVE].iNum       = 1;
+  output[OUT_MDOTXUVEFFECTIVE].iModuleBit = ATMESC;
+  fnWrite[OUT_MDOTXUVEFFECTIVE]           = &WriteMdotXUVEffective;
 
   fvFormattedString(&output[OUT_THERMTEMP].cName, "ThermTemp");
   fvFormattedString(&output[OUT_THERMTEMP].cDescr,
