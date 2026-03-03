@@ -119,54 +119,93 @@ static double fdFlareBinTruncMassNgt1(double dMu) {
   return dProb;
 }
 
+static double fdFlareBinTruncMassNgt2(double dMu) {
+  double dProb;
+
+  if (dMu <= 0 || !isfinite(dMu)) {
+    return 0;
+  }
+
+  dProb = 1.0 - exp(-dMu) * (1.0 + dMu + 0.5 * dMu * dMu);
+
+  if (dProb < 0 && fabs(dProb) <= FLAREBIN_EFFAVG_DIAG_TOL) {
+    dProb = 0;
+  }
+  if (dProb > 1 && fabs(dProb - 1.0) <= FLAREBIN_EFFAVG_DIAG_TOL) {
+    dProb = 1;
+  }
+
+  if (dProb < 0) {
+    dProb = 0;
+  }
+  if (dProb > 1) {
+    dProb = 1;
+  }
+
+  return dProb;
+}
+
+static void fvFlareBinWarnOverlapTolN1(const BODY *body, int iStar, double dMu) {
+  static int bWarned = 0;
+  double dLostMass;
+
+  if (bWarned) {
+    return;
+  }
+  if (dMu <= 0 || !isfinite(dMu)) {
+    return;
+  }
+
+  dLostMass = fdFlareBinTruncMassNgt1(dMu);
+  if (dLostMass > body[iStar].dFlareBinOverlapTol) {
+    fprintf(stderr,
+            "WARNING: FLAREBIN truncation diagnostic on body %d: "
+            "N_max=1 neglects P(N>1)=%.6e (mu=%.6e, tol=%.6e).\n",
+            iStar, dLostMass, dMu, body[iStar].dFlareBinOverlapTol);
+    bWarned = 1;
+  }
+}
+
 static double fdFlareBinIdentityCallback(double dFXUV, void *pContext) {
   (void)pContext;
   return dFXUV;
 }
 
 #ifdef DEBUG
-static void fvFlareBinEffAvgDebugChecks(const BODY *body, int iStar, double dMu,
-                                        double dExpMinusMu, int iNMax) {
-  static int bWarnedTruncN1 = 0;
-  static int bWarnedNgt1    = 0;
-  double dNormN1;
+static void fvFlareBinEffAvgDebugChecks(int iStar, double dMu, double dExpMinusMu,
+                                        int iNMax) {
+  double dNormTrunc;
   double dLostMass;
+  double dLostMassFromNorm;
 
-  dNormN1  = dExpMinusMu * (1.0 + dMu);
-  dLostMass = fdFlareBinTruncMassNgt1(dMu);
+  if (iNMax <= FLAREBIN_OVERLAP_N0) {
+    dNormTrunc = dExpMinusMu;
+    dLostMass  = 1.0 - dExpMinusMu;
+  } else if (iNMax == FLAREBIN_OVERLAP_N1) {
+    dNormTrunc = dExpMinusMu * (1.0 + dMu);
+    dLostMass  = fdFlareBinTruncMassNgt1(dMu);
+  } else {
+    dNormTrunc = dExpMinusMu * (1.0 + dMu + 0.5 * dMu * dMu);
+    dLostMass  = fdFlareBinTruncMassNgt2(dMu);
+  }
 
-  if (dNormN1 < -FLAREBIN_EFFAVG_DIAG_TOL ||
-      dNormN1 > 1.0 + FLAREBIN_EFFAVG_DIAG_TOL) {
+  if (dNormTrunc < -FLAREBIN_EFFAVG_DIAG_TOL ||
+      dNormTrunc > 1.0 + FLAREBIN_EFFAVG_DIAG_TOL) {
     fprintf(stderr,
             "ERROR: FLAREBIN normalization check failed on body %d "
-            "(N_max=1 normalization %.16e).\n",
-            iStar, dNormN1);
+            "(N_max=%d normalization %.16e).\n",
+            iStar, iNMax, dNormTrunc);
     abort();
   }
 
-  if (fabs((1.0 - dLostMass) - dNormN1) >
-      FLAREBIN_EFFAVG_DIAG_TOL * (1.0 + fabs(dNormN1))) {
+  dLostMassFromNorm = 1.0 - dNormTrunc;
+  if (fabs(dLostMassFromNorm - dLostMass) >
+      FLAREBIN_EFFAVG_DIAG_TOL * (1.0 + fabs(dNormTrunc))) {
     fprintf(stderr,
             "ERROR: FLAREBIN truncation-mass check failed on body %d "
-            "(mu=%.16e, P(N>1)=%.16e, normN1=%.16e).\n",
-            iStar, dMu, dLostMass, dNormN1);
+            "(mu=%.16e, N_max=%d, P_lost=%.16e, norm=%.16e).\n",
+            iStar, dMu, iNMax, dLostMass, dNormTrunc);
     abort();
-  }
-
-  if (iNMax == FLAREBIN_OVERLAP_N1 &&
-      dLostMass > body[iStar].dFlareBinOverlapTol && !bWarnedTruncN1) {
-    fprintf(stderr,
-            "WARNING: FLAREBIN truncation diagnostic on body %d: "
-            "N_max=1 neglects P(N>1)=%.6e (mu=%.6e, tol=%.6e).\n",
-            iStar, dLostMass, dMu, body[iStar].dFlareBinOverlapTol);
-    bWarnedTruncN1 = 1;
-  }
-
-  if (iNMax > FLAREBIN_OVERLAP_N1 && !bWarnedNgt1) {
-    fprintf(stderr,
-            "WARNING: FLAREBIN currently evaluates effective averaging "
-            "through N_max=1 only; higher N_max requests are truncated.\n");
-    bWarnedNgt1 = 1;
   }
 }
 #endif
@@ -312,14 +351,15 @@ double fdFlareBinMeanFXUV(BODY *body, SYSTEM *system, int iStar, int iPlanet) {
 
 double fdFlareBinExpectFunction(BODY *body, SYSTEM *system, int iStar, int iPlanet,
                                 double (*fnG)(double, void *), void *pContext) {
-  int iE, iX;
+  int iE, iX, iE1, iE2, iX1, iX2;
   int iNE, iNX;
   double dMu, dExpMinusMu;
   double dLbar, dLq, dFXUVMean, dInvLbar;
-  double dFq, dC0, dC1, dC1Sum;
-  double dDeltaX, dInvDeltaX, dITpl;
+  double dFq, dC0, dC1, dC1Sum, dC2, dC2Sum;
+  double dDeltaX, dInvDeltaX, dInvDeltaX2, dITpl;
   double dTimeEval;
   int iNMax;
+  const double *daE, *daWE, *daWX, *daTplAtX;
 
   if (fnG == NULL) {
     fprintf(stderr, "ERROR: FLAREBIN expectation callback is NULL.\n");
@@ -370,7 +410,14 @@ double fdFlareBinExpectFunction(BODY *body, SYSTEM *system, int iStar, int iPlan
   dC0 = dExpMinusMu * fnG(dFq, pContext);
 
   iNMax = body[iStar].iFlareBinMaxOverlapN;
+  if (iNMax == FLAREBIN_OVERLAP_N1) {
+    fvFlareBinWarnOverlapTolN1(body, iStar, dMu);
+  }
+
   if (iNMax <= FLAREBIN_OVERLAP_N0) {
+#ifdef DEBUG
+    fvFlareBinEffAvgDebugChecks(iStar, dMu, dExpMinusMu, iNMax);
+#endif
     return dC0;
   }
 
@@ -384,11 +431,17 @@ double fdFlareBinExpectFunction(BODY *body, SYSTEM *system, int iStar, int iPlan
   }
 
   dInvDeltaX = 1.0 / dDeltaX;
+  dInvDeltaX2 = dInvDeltaX * dInvDeltaX;
   dC1Sum     = 0;
+  dC2        = 0;
+  daE        = body[iStar].daFlareBinQuadE;
+  daWE       = body[iStar].daFlareBinQuadWE;
+  daWX       = body[iStar].daFlareBinQuadWX;
+  daTplAtX   = body[iStar].daFlareBinTplAtX;
 
   for (iE = 0; iE < iNE; iE++) {
-    double dE       = body[iStar].daFlareBinQuadE[iE];
-    double dWE      = body[iStar].daFlareBinQuadWE[iE];
+    double dE       = daE[iE];
+    double dWE      = daWE[iE];
     double dRate    = fdFlareBinRateDensity(body, iStar, dE, dTimeEval);
     double dTau     = fdFlareBinDuration(body, iStar, dE);
     double dAmpLum;
@@ -403,8 +456,8 @@ double fdFlareBinExpectFunction(BODY *body, SYSTEM *system, int iStar, int iPlan
     dAmpFluxScale = dFXUVMean * dAmpLum * dInvLbar;
 
     for (iX = 0; iX < iNX; iX++) {
-      double dWX   = body[iStar].daFlareBinQuadWX[iX];
-      double dFXUV = dFq + dAmpFluxScale * body[iStar].daFlareBinTplAtX[iX];
+      double dWX   = daWX[iX];
+      double dFXUV = dFq + dAmpFluxScale * daTplAtX[iX];
       dInner += dWX * fnG(dFXUV, pContext);
     }
 
@@ -414,11 +467,71 @@ double fdFlareBinExpectFunction(BODY *body, SYSTEM *system, int iStar, int iPlan
 
   dC1 = dExpMinusMu * dC1Sum;
 
+  if (iNMax >= FLAREBIN_OVERLAP_N2) {
+    /*
+     * C2 correction scales as O(N_E^2 * N_X^2), so keep quadrature settings
+     * modest unless overlap convergence requires higher resolution.
+     */
+    dC2Sum = 0;
+    for (iE1 = 0; iE1 < iNE; iE1++) {
+      double dE1      = daE[iE1];
+      double dWE1     = daWE[iE1];
+      double dRate1   = fdFlareBinRateDensity(body, iStar, dE1, dTimeEval);
+      double dTau1    = fdFlareBinDuration(body, iStar, dE1);
+      double dAmpLum1;
+      double dAmpFluxScale1;
+      double dEWeight1;
+
+      if (dRate1 <= 0 || dTau1 <= 0 || dWE1 == 0) {
+        continue;
+      }
+
+      dAmpLum1      = fdFlareBinEnergyToXUV(body, iStar, dE1) / (dTau1 * dITpl);
+      dAmpFluxScale1 = dFXUVMean * dAmpLum1 * dInvLbar;
+      dEWeight1     = dWE1 * dRate1 * dTau1;
+
+      for (iE2 = 0; iE2 < iNE; iE2++) {
+        double dE2      = daE[iE2];
+        double dWE2     = daWE[iE2];
+        double dRate2   = fdFlareBinRateDensity(body, iStar, dE2, dTimeEval);
+        double dTau2    = fdFlareBinDuration(body, iStar, dE2);
+        double dAmpLum2;
+        double dAmpFluxScale2;
+        double dEWeight2;
+        double dInner2 = 0;
+
+        if (dRate2 <= 0 || dTau2 <= 0 || dWE2 == 0) {
+          continue;
+        }
+
+        dAmpLum2      = fdFlareBinEnergyToXUV(body, iStar, dE2) / (dTau2 * dITpl);
+        dAmpFluxScale2 = dFXUVMean * dAmpLum2 * dInvLbar;
+        dEWeight2     = dWE2 * dRate2 * dTau2;
+
+        for (iX1 = 0; iX1 < iNX; iX1++) {
+          double dWX1      = daWX[iX1];
+          double dFXUVBase = dFq + dAmpFluxScale1 * daTplAtX[iX1];
+
+          for (iX2 = 0; iX2 < iNX; iX2++) {
+            double dWX2  = daWX[iX2];
+            double dFXUV = dFXUVBase + dAmpFluxScale2 * daTplAtX[iX2];
+            dInner2 += dWX1 * dWX2 * fnG(dFXUV, pContext);
+          }
+        }
+
+        dInner2 *= dInvDeltaX2;
+        dC2Sum += dEWeight1 * dEWeight2 * dInner2;
+      }
+    }
+
+    dC2 = 0.5 * dExpMinusMu * dC2Sum;
+  }
+
 #ifdef DEBUG
-  fvFlareBinEffAvgDebugChecks(body, iStar, dMu, dExpMinusMu, iNMax);
+  fvFlareBinEffAvgDebugChecks(iStar, dMu, dExpMinusMu, iNMax);
 #endif
 
-  return dC0 + dC1;
+  return dC0 + dC1 + dC2;
 }
 
 double fdFlareBinExpectAtmEscRhs(BODY *body, SYSTEM *system, int iStar,
