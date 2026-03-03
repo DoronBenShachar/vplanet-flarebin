@@ -10,6 +10,7 @@
 #define FLAREBIN_GL_MAX_ITERS 128
 #define FLAREBIN_GL_ROOT_TOL 1e-14
 #define FLAREBIN_GL_VERIFY_TOL 1e-12
+#define FLAREBIN_EFFAVG_DIAG_TOL 1e-12
 
 static void fvFlareBinLegendreWithDeriv(int iN, double dX, double *dPN,
                                         double *dDPN) {
@@ -91,6 +92,84 @@ int fiFlareBinGaussLegendreRule(int iN, double dA, double dB, double *daNode,
 
   return 1;
 }
+
+static double fdFlareBinTruncMassNgt1(double dMu) {
+  double dProb;
+
+  if (dMu <= 0 || !isfinite(dMu)) {
+    return 0;
+  }
+
+  dProb = 1.0 - exp(-dMu) * (1.0 + dMu);
+
+  if (dProb < 0 && fabs(dProb) <= FLAREBIN_EFFAVG_DIAG_TOL) {
+    dProb = 0;
+  }
+  if (dProb > 1 && fabs(dProb - 1.0) <= FLAREBIN_EFFAVG_DIAG_TOL) {
+    dProb = 1;
+  }
+
+  if (dProb < 0) {
+    dProb = 0;
+  }
+  if (dProb > 1) {
+    dProb = 1;
+  }
+
+  return dProb;
+}
+
+static double fdFlareBinIdentityCallback(double dFXUV, void *pContext) {
+  (void)pContext;
+  return dFXUV;
+}
+
+#ifdef DEBUG
+static void fvFlareBinEffAvgDebugChecks(const BODY *body, int iStar, double dMu,
+                                        double dExpMinusMu, int iNMax) {
+  static int bWarnedTruncN1 = 0;
+  static int bWarnedNgt1    = 0;
+  double dNormN1;
+  double dLostMass;
+
+  dNormN1  = dExpMinusMu * (1.0 + dMu);
+  dLostMass = fdFlareBinTruncMassNgt1(dMu);
+
+  if (dNormN1 < -FLAREBIN_EFFAVG_DIAG_TOL ||
+      dNormN1 > 1.0 + FLAREBIN_EFFAVG_DIAG_TOL) {
+    fprintf(stderr,
+            "ERROR: FLAREBIN normalization check failed on body %d "
+            "(N_max=1 normalization %.16e).\n",
+            iStar, dNormN1);
+    abort();
+  }
+
+  if (fabs((1.0 - dLostMass) - dNormN1) >
+      FLAREBIN_EFFAVG_DIAG_TOL * (1.0 + fabs(dNormN1))) {
+    fprintf(stderr,
+            "ERROR: FLAREBIN truncation-mass check failed on body %d "
+            "(mu=%.16e, P(N>1)=%.16e, normN1=%.16e).\n",
+            iStar, dMu, dLostMass, dNormN1);
+    abort();
+  }
+
+  if (iNMax == FLAREBIN_OVERLAP_N1 &&
+      dLostMass > body[iStar].dFlareBinOverlapTol && !bWarnedTruncN1) {
+    fprintf(stderr,
+            "WARNING: FLAREBIN truncation diagnostic on body %d: "
+            "N_max=1 neglects P(N>1)=%.6e (mu=%.6e, tol=%.6e).\n",
+            iStar, dLostMass, dMu, body[iStar].dFlareBinOverlapTol);
+    bWarnedTruncN1 = 1;
+  }
+
+  if (iNMax > FLAREBIN_OVERLAP_N1 && !bWarnedNgt1) {
+    fprintf(stderr,
+            "WARNING: FLAREBIN currently evaluates effective averaging "
+            "through N_max=1 only; higher N_max requests are truncated.\n");
+    bWarnedNgt1 = 1;
+  }
+}
+#endif
 
 static int fiFlareBinGaussLegendreVerify(void) {
   int iNCase, iCase, i;
@@ -218,4 +297,132 @@ void fvFlareBinPrecompute(BODY *body, SYSTEM *system, int iStar,
     abort();
   }
 #endif
+}
+
+double fdFlareBinMeanFXUV(BODY *body, SYSTEM *system, int iStar, int iPlanet) {
+  (void)system;
+  (void)iStar;
+
+  if (iPlanet < 0 || !isfinite(body[iPlanet].dFXUV) || body[iPlanet].dFXUV < 0) {
+    return 0;
+  }
+
+  return body[iPlanet].dFXUV;
+}
+
+double fdFlareBinExpectFunction(BODY *body, SYSTEM *system, int iStar, int iPlanet,
+                                double (*fnG)(double, void *), void *pContext) {
+  int iE, iX;
+  int iNE, iNX;
+  double dMu, dExpMinusMu;
+  double dLbar, dLq, dFXUVMean, dInvLbar;
+  double dFq, dC0, dC1, dC1Sum;
+  double dDeltaX, dInvDeltaX, dITpl;
+  double dTimeEval;
+  int iNMax;
+
+  if (fnG == NULL) {
+    fprintf(stderr, "ERROR: FLAREBIN expectation callback is NULL.\n");
+    exit(EXIT_FAILURE);
+  }
+
+  if (!body[iStar].bFlareBin) {
+    return fnG(fdFlareBinMeanFXUV(body, system, iStar, iPlanet), pContext);
+  }
+
+  dTimeEval = body[iStar].dAge;
+  fvFlareBinPrecompute(body, system, iStar, dTimeEval);
+
+  iNE = body[iStar].iFlareBinNEnergy;
+  iNX = body[iStar].iFlareBinNPhase;
+  if (iNE <= 0 || iNX <= 0 || body[iStar].daFlareBinQuadE == NULL ||
+      body[iStar].daFlareBinQuadWE == NULL || body[iStar].daFlareBinQuadWX == NULL ||
+      body[iStar].daFlareBinTplAtX == NULL) {
+    fprintf(stderr,
+            "ERROR: FLAREBIN expectation cache missing on body %d.\n",
+            iStar);
+    exit(EXIT_FAILURE);
+  }
+
+  dMu = body[iStar].dFlareBinMu;
+  if (dMu < 0 && fabs(dMu) <= FLAREBIN_EFFAVG_DIAG_TOL) {
+    dMu = 0;
+  }
+  if (dMu < 0) {
+    fprintf(stderr,
+            "ERROR: FLAREBIN invalid mu on body %d: %.16e.\n",
+            iStar, dMu);
+    exit(EXIT_FAILURE);
+  }
+
+  dExpMinusMu = exp(-dMu);
+  dLbar       = body[iStar].dLXUV;
+  dLq         = body[iStar].dFlareBinLQ;
+  dFXUVMean   = fdFlareBinMeanFXUV(body, system, iStar, iPlanet);
+
+  if (dLbar > 0) {
+    dInvLbar = 1.0 / dLbar;
+  } else {
+    dInvLbar = 0;
+  }
+
+  dFq = dFXUVMean * dLq * dInvLbar;
+  dC0 = dExpMinusMu * fnG(dFq, pContext);
+
+  iNMax = body[iStar].iFlareBinMaxOverlapN;
+  if (iNMax <= FLAREBIN_OVERLAP_N0) {
+    return dC0;
+  }
+
+  dDeltaX = body[iStar].dFlareBinDeltaX;
+  dITpl   = body[iStar].dFlareBinITpl;
+  if (dDeltaX <= 0 || dITpl <= 0) {
+    fprintf(stderr,
+            "ERROR: FLAREBIN invalid template normalization on body %d.\n",
+            iStar);
+    exit(EXIT_FAILURE);
+  }
+
+  dInvDeltaX = 1.0 / dDeltaX;
+  dC1Sum     = 0;
+
+  for (iE = 0; iE < iNE; iE++) {
+    double dE       = body[iStar].daFlareBinQuadE[iE];
+    double dWE      = body[iStar].daFlareBinQuadWE[iE];
+    double dRate    = fdFlareBinRateDensity(body, iStar, dE, dTimeEval);
+    double dTau     = fdFlareBinDuration(body, iStar, dE);
+    double dAmpLum;
+    double dAmpFluxScale;
+    double dInner = 0;
+
+    if (dRate <= 0 || dTau <= 0 || dWE == 0) {
+      continue;
+    }
+
+    dAmpLum = fdFlareBinEnergyToXUV(body, iStar, dE) / (dTau * dITpl);
+    dAmpFluxScale = dFXUVMean * dAmpLum * dInvLbar;
+
+    for (iX = 0; iX < iNX; iX++) {
+      double dWX   = body[iStar].daFlareBinQuadWX[iX];
+      double dFXUV = dFq + dAmpFluxScale * body[iStar].daFlareBinTplAtX[iX];
+      dInner += dWX * fnG(dFXUV, pContext);
+    }
+
+    dInner *= dInvDeltaX;
+    dC1Sum += dWE * dRate * dTau * dInner;
+  }
+
+  dC1 = dExpMinusMu * dC1Sum;
+
+#ifdef DEBUG
+  fvFlareBinEffAvgDebugChecks(body, iStar, dMu, dExpMinusMu, iNMax);
+#endif
+
+  return dC0 + dC1;
+}
+
+double fdFlareBinExpectAtmEscRhs(BODY *body, SYSTEM *system, int iStar,
+                                 int iPlanet) {
+  return fdFlareBinExpectFunction(body, system, iStar, iPlanet,
+                                  fdFlareBinIdentityCallback, NULL);
 }
