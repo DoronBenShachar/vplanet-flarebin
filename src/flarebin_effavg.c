@@ -44,9 +44,10 @@ static void fvFlareBinLegendreWithDeriv(int iN, double dX, double *dPN,
 /*
  * Deterministic Gauss-Legendre nodes/weights on [dA, dB].
  * Caller allocates daNode/daWeight with iN entries.
+ * This symbol is shared within FLAREBIN implementation units.
  */
-static int fiFlareBinGaussLegendreRule(int iN, double dA, double dB,
-                                       double *daNode, double *daWeight) {
+int fiFlareBinGaussLegendreRule(int iN, double dA, double dB, double *daNode,
+                                double *daWeight) {
   int i, iIter;
   int iHalf;
   double dMid, dHalfWidth;

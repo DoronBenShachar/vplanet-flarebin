@@ -8,6 +8,9 @@
 
 #include "vplanet.h"
 
+/* Internal helper from flarebin_effavg.c */
+int fiFlareBinGaussLegendreRule(int, double, double, double *, double *);
+
 static void fvFlareBinCopyArray(double **daDest, const double *daSrc, int iSize,
                                  const char *cName) {
   double *daTmp;
@@ -31,6 +34,22 @@ static void fvFlareBinCopyArray(double **daDest, const double *daSrc, int iSize,
   for (i = 0; i < iSize; i++) {
     (*daDest)[i] = daSrc[i];
   }
+}
+
+static double *fdaFlareBinMallocArray(int iSize, const char *cName) {
+  double *daTmp;
+
+  if (iSize <= 0) {
+    return NULL;
+  }
+
+  daTmp = malloc(iSize * sizeof(double));
+  if (daTmp == NULL) {
+    fprintf(stderr, "ERROR: FLAREBIN failed to allocate %s.\n", cName);
+    exit(EXIT_FAILURE);
+  }
+
+  return daTmp;
 }
 
 void BodyCopyFlareBin(BODY *dest, BODY *src, int foo, int iNumBodies,
@@ -1058,56 +1077,114 @@ void fnForceBehaviorFlareBin(BODY *body, MODULE *module, EVOLVE *evolve, IO *io,
 
 void InitializeBodyFlareBin(BODY *body, CONTROL *control, UPDATE *update,
                             int iBody, int iModule) {
+  int iE, iX;
+  int iNE, iNX;
+  double dULo, dUHi;
+  double dXMin, dXEnd;
+
   (void)control;
   (void)update;
   (void)iModule;
 
-  body[iBody].iFlareBinSeed        = 0;
-  body[iBody].iFlareBinDist        = FLAREBIN_DIST_POWERLAW;
-  body[iBody].iFlareBinNormMode    = FLAREBIN_NORM_FROM_FFD;
-  body[iBody].iFlareBinBandPass    = FLAREBIN_BANDPASS_XUV;
-  body[iBody].iFlareBinQuadNE      = 24;
-  body[iBody].iFlareBinQuadNX      = 16;
-  body[iBody].iFlareBinMaxOverlapN = FLAREBIN_OVERLAP_N1;
-  body[iBody].iFlareBinNEnergy     = 0;
-  body[iBody].iFlareBinNPhase      = 0;
-
-  body[iBody].dFlareBinOverlapTol = 1e-6;
-  body[iBody].dFlareBinFrac       = 0;
-  body[iBody].dFlareBinEmin       = 0;
-  body[iBody].dFlareBinEmax       = 0;
-  body[iBody].dFlareBinEStochMin = 0;
-  body[iBody].dFlareBinAlpha     = 0;
-  body[iBody].dFlareBinK         = 0;
-  body[iBody].dFlareBinSlope     = 0;
-  body[iBody].dFlareBinYInt      = 0;
-  body[iBody].dFlareBinLogMu     = 0;
-  body[iBody].dFlareBinLogSigma  = 0;
-  body[iBody].dFlareBinRateTot   = 0;
-  body[iBody].dFlareBinTau0      = 0;
-  body[iBody].dFlareBinDurE0     = 0;
-  body[iBody].dFlareBinDurExp    = 0;
-  body[iBody].dFlareBinXMin      = -1;
-  body[iBody].dFlareBinXEnd      = 20;
-  body[iBody].dFlareBinBandC     = 1;
-  body[iBody].dFlareBinBandP     = 1;
-  body[iBody].dFlareBinFXUVThresh1 = 0;
-  body[iBody].dFlareBinFXUVThresh2 = 0;
-
-  body[iBody].dFlareBinLQ        = 0;
-  body[iBody].dFlareBinPStoch    = 0;
-  body[iBody].dFlareBinMu        = 0;
-  body[iBody].dFlareBinITpl      = 0;
-  body[iBody].dFlareBinDeltaX    = 0;
+  /* User-provided option values are already parsed into BODY before this hook.
+   * Initialize only derived cache/storage fields here. */
+  body[iBody].dFlareBinLQ                = 0;
+  body[iBody].dFlareBinPStoch            = 0;
+  body[iBody].dFlareBinMu                = 0;
   body[iBody].dFlareBinLastPrecomputeAge = -1;
+  body[iBody].iFlareBinNEnergy           = 0;
+  body[iBody].iFlareBinNPhase            = 0;
+  body[iBody].daFlareBinQuadU            = NULL;
+  body[iBody].daFlareBinQuadWU           = NULL;
+  body[iBody].daFlareBinQuadE            = NULL;
+  body[iBody].daFlareBinQuadWE           = NULL;
+  body[iBody].daFlareBinQuadX            = NULL;
+  body[iBody].daFlareBinQuadWX           = NULL;
+  body[iBody].daFlareBinTplAtX           = NULL;
 
-  body[iBody].daFlareBinQuadU  = NULL;
-  body[iBody].daFlareBinQuadWU = NULL;
-  body[iBody].daFlareBinQuadE  = NULL;
-  body[iBody].daFlareBinQuadWE = NULL;
-  body[iBody].daFlareBinQuadX  = NULL;
-  body[iBody].daFlareBinQuadWX = NULL;
-  body[iBody].daFlareBinTplAtX = NULL;
+  dXMin                       = body[iBody].dFlareBinXMin;
+  dXEnd                       = body[iBody].dFlareBinXEnd;
+  body[iBody].dFlareBinDeltaX = dXEnd - dXMin;
+  body[iBody].dFlareBinITpl   = fdFlareTplIntegral(dXMin, dXEnd);
+
+  /* Initialize caches only when integration bounds are valid; VerifyFlareBin
+   * enforces these constraints and reports user-facing errors. */
+  if (body[iBody].dFlareBinEStochMin <= 0 ||
+      body[iBody].dFlareBinEmax <= body[iBody].dFlareBinEStochMin ||
+      body[iBody].dFlareBinDeltaX <= 0 || body[iBody].dFlareBinITpl <= 0 ||
+      body[iBody].iFlareBinQuadNE < 1 || body[iBody].iFlareBinQuadNX < 1) {
+    return;
+  }
+
+  dULo = log(body[iBody].dFlareBinEStochMin);
+  dUHi = log(body[iBody].dFlareBinEmax);
+
+  iNE = body[iBody].iFlareBinQuadNE;
+  iNX = body[iBody].iFlareBinQuadNX;
+
+  body[iBody].iFlareBinNEnergy = iNE;
+  body[iBody].iFlareBinNPhase  = iNX;
+
+  body[iBody].daFlareBinQuadU =
+        fdaFlareBinMallocArray(iNE, "daFlareBinQuadU");
+  body[iBody].daFlareBinQuadWU =
+        fdaFlareBinMallocArray(iNE, "daFlareBinQuadWU");
+  body[iBody].daFlareBinQuadE =
+        fdaFlareBinMallocArray(iNE, "daFlareBinQuadE");
+  body[iBody].daFlareBinQuadWE =
+        fdaFlareBinMallocArray(iNE, "daFlareBinQuadWE");
+
+  body[iBody].daFlareBinQuadX =
+        fdaFlareBinMallocArray(iNX, "daFlareBinQuadX");
+  body[iBody].daFlareBinQuadWX =
+        fdaFlareBinMallocArray(iNX, "daFlareBinQuadWX");
+  body[iBody].daFlareBinTplAtX =
+        fdaFlareBinMallocArray(iNX, "daFlareBinTplAtX");
+
+  if (!fiFlareBinGaussLegendreRule(iNE, dULo, dUHi, body[iBody].daFlareBinQuadU,
+                                   body[iBody].daFlareBinQuadWU)) {
+    fprintf(stderr, "ERROR: FLAREBIN failed to build log-energy quadrature.\n");
+    exit(EXIT_FAILURE);
+  }
+
+  for (iE = 0; iE < iNE; iE++) {
+    body[iBody].daFlareBinQuadE[iE] = exp(body[iBody].daFlareBinQuadU[iE]);
+    body[iBody].daFlareBinQuadWE[iE] =
+          body[iBody].daFlareBinQuadWU[iE] * body[iBody].daFlareBinQuadE[iE];
+  }
+
+  if (!fiFlareBinGaussLegendreRule(iNX, dXMin, dXEnd, body[iBody].daFlareBinQuadX,
+                                   body[iBody].daFlareBinQuadWX)) {
+    fprintf(stderr, "ERROR: FLAREBIN failed to build phase quadrature.\n");
+    exit(EXIT_FAILURE);
+  }
+
+  for (iX = 0; iX < iNX; iX++) {
+    body[iBody].daFlareBinTplAtX[iX] =
+          fdFlareTpl(body[iBody].daFlareBinQuadX[iX]);
+  }
+
+#ifdef DEBUG
+  for (iE = 0; iE < iNE; iE++) {
+    if (body[iBody].daFlareBinQuadWU[iE] <= 0 ||
+        body[iBody].daFlareBinQuadWE[iE] <= 0) {
+      fprintf(stderr, "ERROR: FLAREBIN non-positive energy quadrature weight.\n");
+      abort();
+    }
+  }
+
+  for (iX = 0; iX < iNX; iX++) {
+    if (body[iBody].daFlareBinQuadWX[iX] <= 0) {
+      fprintf(stderr, "ERROR: FLAREBIN non-positive phase quadrature weight.\n");
+      abort();
+    }
+    if (body[iBody].daFlareBinQuadX[iX] < dXMin - 1e-12 ||
+        body[iBody].daFlareBinQuadX[iX] > dXEnd + 1e-12) {
+      fprintf(stderr, "ERROR: FLAREBIN phase node out of bounds.\n");
+      abort();
+    }
+  }
+#endif
 }
 
 void InitializeUpdateTmpBodyFlareBin(BODY *body, CONTROL *control, UPDATE *update,
