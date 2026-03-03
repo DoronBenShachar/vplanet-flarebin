@@ -228,6 +228,18 @@ void fnForceBehaviorAtmEsc(BODY *, MODULE *, EVOLVE *, IO *, SYSTEM *, UPDATE *,
                            fnUpdateVariable ***, int, int);
 void fnPropsAuxAtmEsc(BODY *, EVOLVE *, IO *, UPDATE *, int);
 
+typedef struct ATMESC_RHS {
+  double dSurfaceWaterMassDt;
+  double dOxygenMassDt;
+  double dOxygenMantleMassDt;
+  double dEnvelopeMassDt;
+  double dEnvelopeMassDtBondiLimited;
+  double dEnvelopeMassDtRRLimited;
+} ATMESC_RHS;
+
+ATMESC_RHS AtmEscRhsGivenFXUV(const BODY *body, const SYSTEM *system,
+                              int iBody, double dFXUV);
+
 double fdDSurfaceWaterMassDt(BODY *, SYSTEM *, int *);
 double fdDEnvelopeMassDt(BODY *, SYSTEM *, int *);
 double fdDEnvelopeMassDtBondiLimited(BODY *, SYSTEM *, int *);
