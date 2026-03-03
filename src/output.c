@@ -2580,6 +2580,7 @@ void InitializeOutput(FILES *files, OUTPUT *output, fnWriteOutput fnWrite[]) {
   InitializeOutputPoise(output, fnWrite);
   InitializeOutputBinary(output, fnWrite);
   InitializeOutputFlare(output, fnWrite);
+  InitializeOutputFlareBin(output, fnWrite);
   InitializeOutputGalHabit(output, fnWrite);
   InitializeOutputSpiNBody(output, fnWrite);
   InitializeOutputMagmOc(output, fnWrite);
