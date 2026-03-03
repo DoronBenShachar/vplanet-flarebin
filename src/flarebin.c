@@ -8,6 +8,31 @@
 
 #include "vplanet.h"
 
+static void fvFlareBinCopyArray(double **daDest, const double *daSrc, int iSize,
+                                 const char *cName) {
+  double *daTmp;
+  int i;
+
+  if (iSize <= 0 || daSrc == NULL) {
+    if (*daDest != NULL) {
+      free(*daDest);
+      *daDest = NULL;
+    }
+    return;
+  }
+
+  daTmp = realloc(*daDest, iSize * sizeof(double));
+  if (daTmp == NULL) {
+    fprintf(stderr, "ERROR: FLAREBIN failed to allocate %s.\n", cName);
+    exit(EXIT_FAILURE);
+  }
+  *daDest = daTmp;
+
+  for (i = 0; i < iSize; i++) {
+    (*daDest)[i] = daSrc[i];
+  }
+}
+
 void BodyCopyFlareBin(BODY *dest, BODY *src, int foo, int iNumBodies,
                       int iBody) {
   (void)foo;
@@ -54,13 +79,24 @@ void BodyCopyFlareBin(BODY *dest, BODY *src, int foo, int iNumBodies,
   dest[iBody].dFlareBinDeltaX            = src[iBody].dFlareBinDeltaX;
   dest[iBody].dFlareBinLastPrecomputeAge = src[iBody].dFlareBinLastPrecomputeAge;
 
-  dest[iBody].daFlareBinQuadU  = src[iBody].daFlareBinQuadU;
-  dest[iBody].daFlareBinQuadWU = src[iBody].daFlareBinQuadWU;
-  dest[iBody].daFlareBinQuadE  = src[iBody].daFlareBinQuadE;
-  dest[iBody].daFlareBinQuadWE = src[iBody].daFlareBinQuadWE;
-  dest[iBody].daFlareBinQuadX  = src[iBody].daFlareBinQuadX;
-  dest[iBody].daFlareBinQuadWX = src[iBody].daFlareBinQuadWX;
-  dest[iBody].daFlareBinTplAtX = src[iBody].daFlareBinTplAtX;
+  fvFlareBinCopyArray(&dest[iBody].daFlareBinQuadU, src[iBody].daFlareBinQuadU,
+                      dest[iBody].iFlareBinNEnergy, "daFlareBinQuadU");
+  fvFlareBinCopyArray(&dest[iBody].daFlareBinQuadWU,
+                      src[iBody].daFlareBinQuadWU,
+                      dest[iBody].iFlareBinNEnergy, "daFlareBinQuadWU");
+  fvFlareBinCopyArray(&dest[iBody].daFlareBinQuadE, src[iBody].daFlareBinQuadE,
+                      dest[iBody].iFlareBinNEnergy, "daFlareBinQuadE");
+  fvFlareBinCopyArray(&dest[iBody].daFlareBinQuadWE,
+                      src[iBody].daFlareBinQuadWE,
+                      dest[iBody].iFlareBinNEnergy, "daFlareBinQuadWE");
+  fvFlareBinCopyArray(&dest[iBody].daFlareBinQuadX, src[iBody].daFlareBinQuadX,
+                      dest[iBody].iFlareBinNPhase, "daFlareBinQuadX");
+  fvFlareBinCopyArray(&dest[iBody].daFlareBinQuadWX,
+                      src[iBody].daFlareBinQuadWX,
+                      dest[iBody].iFlareBinNPhase, "daFlareBinQuadWX");
+  fvFlareBinCopyArray(&dest[iBody].daFlareBinTplAtX,
+                      src[iBody].daFlareBinTplAtX,
+                      dest[iBody].iFlareBinNPhase, "daFlareBinTplAtX");
 }
 
 static void fvFlareBinOptionError(CONTROL *control, FILES *files, OPTIONS *options,
@@ -905,16 +941,85 @@ void PropsAuxFlareBin(BODY *body, EVOLVE *evolve, IO *io, UPDATE *update,
 void VerifyFlareBin(BODY *body, CONTROL *control, FILES *files, OPTIONS *options,
                     OUTPUT *output, SYSTEM *system, UPDATE *update, int iBody,
                     int iModule) {
-  (void)files;
-  (void)options;
+  int iFile = iBody + 1;
+  int iLine;
+
   (void)output;
   (void)system;
+
+  if (body[iBody].iBodyType != 0) {
+    iLine = options[OPT_BODYTYPE].iLine[iFile];
+    if (iLine < 0) {
+      iLine = options[OPT_MODULES].iLine[iFile];
+    }
+    fvFlareBinOptionError(control, files, &options[OPT_BODYTYPE], iFile, iLine,
+                          "must be 0 for FLAREBIN (star body only).");
+  }
+
+  if (!body[iBody].bStellar) {
+    fvFlareBinOptionError(control, files, &options[OPT_MODULES], iFile,
+                          options[OPT_MODULES].iLine[iFile],
+                          "requires module STELLAR on the same body.");
+  }
+
+  if (body[iBody].bFlare) {
+    fvFlareBinOptionError(control, files, &options[OPT_MODULES], iFile,
+                          options[OPT_MODULES].iLine[iFile],
+                          "cannot be used with module FLARE on the same body.");
+  }
+
+  if (body[iBody].dFlareBinEmax <= body[iBody].dFlareBinEmin) {
+    iLine = options[OPT_FLAREBINEMAX].iLine[iFile];
+    if (iLine < 0) {
+      iLine = options[OPT_FLAREBINEMIN].iLine[iFile];
+    }
+    fvFlareBinOptionError(control, files, &options[OPT_FLAREBINEMAX], iFile,
+                          iLine, "must be > dFlareBinEmin.");
+  }
+
+  if (body[iBody].dFlareBinEStochMin <= body[iBody].dFlareBinEmin) {
+    iLine = options[OPT_FLAREBINESTOCHMIN].iLine[iFile];
+    if (iLine < 0) {
+      iLine = options[OPT_FLAREBINEMIN].iLine[iFile];
+    }
+    fvFlareBinOptionError(control, files, &options[OPT_FLAREBINESTOCHMIN],
+                          iFile, iLine, "must be > dFlareBinEmin.");
+  }
+
+  if (body[iBody].dFlareBinEStochMin > body[iBody].dFlareBinEmax) {
+    iLine = options[OPT_FLAREBINESTOCHMIN].iLine[iFile];
+    if (iLine < 0) {
+      iLine = options[OPT_FLAREBINEMAX].iLine[iFile];
+    }
+    fvFlareBinOptionError(control, files, &options[OPT_FLAREBINESTOCHMIN],
+                          iFile, iLine, "must be <= dFlareBinEmax.");
+  }
+
+  if (body[iBody].dFlareBinXEnd <= body[iBody].dFlareBinXMin) {
+    iLine = options[OPT_FLAREBINXEND].iLine[iFile];
+    if (iLine < 0) {
+      iLine = options[OPT_FLAREBINXMIN].iLine[iFile];
+    }
+    fvFlareBinOptionError(control, files, &options[OPT_FLAREBINXEND], iFile,
+                          iLine, "must be > dFlareBinXMin.");
+  }
+
+  if (body[iBody].dFlareBinTau0 <= 0) {
+    fvFlareBinOptionError(control, files, &options[OPT_FLAREBINTAU0], iFile,
+                          options[OPT_FLAREBINTAU0].iLine[iFile],
+                          "must be > 0.");
+  }
+
+  if (body[iBody].dFlareBinDurE0 <= 0) {
+    fvFlareBinOptionError(control, files, &options[OPT_FLAREBINDURE0], iFile,
+                          options[OPT_FLAREBINDURE0].iLine[iFile],
+                          "must be > 0.");
+  }
 
   control->fnForceBehavior[iBody][iModule]   = &fnForceBehaviorFlareBin;
   control->fnPropsAux[iBody][iModule]        = &PropsAuxFlareBin;
   control->Evolve.fnBodyCopy[iBody][iModule] = &BodyCopyFlareBin;
 
-  (void)body;
   (void)update;
 }
 
@@ -1003,6 +1108,22 @@ void InitializeBodyFlareBin(BODY *body, CONTROL *control, UPDATE *update,
   body[iBody].daFlareBinQuadX  = NULL;
   body[iBody].daFlareBinQuadWX = NULL;
   body[iBody].daFlareBinTplAtX = NULL;
+}
+
+void InitializeUpdateTmpBodyFlareBin(BODY *body, CONTROL *control, UPDATE *update,
+                                     int iBody) {
+  (void)body;
+  (void)update;
+
+  control->Evolve.tmpBody[iBody].iFlareBinNEnergy = 0;
+  control->Evolve.tmpBody[iBody].iFlareBinNPhase  = 0;
+  control->Evolve.tmpBody[iBody].daFlareBinQuadU  = NULL;
+  control->Evolve.tmpBody[iBody].daFlareBinQuadWU = NULL;
+  control->Evolve.tmpBody[iBody].daFlareBinQuadE  = NULL;
+  control->Evolve.tmpBody[iBody].daFlareBinQuadWE = NULL;
+  control->Evolve.tmpBody[iBody].daFlareBinQuadX  = NULL;
+  control->Evolve.tmpBody[iBody].daFlareBinQuadWX = NULL;
+  control->Evolve.tmpBody[iBody].daFlareBinTplAtX = NULL;
 }
 
 void InitializeUpdateFlareBin(BODY *body, UPDATE *update, int iBody) {
@@ -1216,6 +1337,7 @@ void AddModuleFlareBin(CONTROL *control, MODULE *module, int iBody,
   module->fnVerifyHalt[iBody][iModule]        = &VerifyHaltFlareBin;
 
   module->fnInitializeBody[iBody][iModule]      = &InitializeBodyFlareBin;
+  module->fnInitializeUpdateTmpBody[iBody][iModule] = &InitializeUpdateTmpBodyFlareBin;
   module->fnInitializeUpdate[iBody][iModule]    = &InitializeUpdateFlareBin;
   module->fnInitializeOutput[iBody][iModule]    = &InitializeOutputFlareBin;
 }

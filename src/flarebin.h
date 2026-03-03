@@ -94,6 +94,7 @@ typedef enum {
 void AddModuleFlareBin(CONTROL *, MODULE *, int, int);
 void BodyCopyFlareBin(BODY *, BODY *, int, int, int);
 void InitializeBodyFlareBin(BODY *, CONTROL *, UPDATE *, int, int);
+void InitializeUpdateTmpBodyFlareBin(BODY *, CONTROL *, UPDATE *, int);
 void InitializeUpdateFlareBin(BODY *, UPDATE *, int);
 
 void InitializeOptionsFlareBin(OPTIONS *, fnReadOption[]);
