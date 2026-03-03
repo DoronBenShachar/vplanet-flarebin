@@ -63,6 +63,9 @@
 #define OUT_FLAREBINPFXUVABOVE1 2422
 #define OUT_FLAREBINPFXUVABOVE2 2423
 
+/* Diagnostic sentinel used when an optional flarebin output is disabled. */
+#define FLAREBIN_OUTPUT_SENTINEL_DISABLED (-1.0)
+
 /* Distribution type */
 typedef enum {
   FLAREBIN_DIST_POWERLAW = 0,

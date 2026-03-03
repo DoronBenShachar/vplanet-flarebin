@@ -11,6 +11,12 @@
 /* Internal helper from flarebin_effavg.c */
 int fiFlareBinGaussLegendreRule(int, double, double, double *, double *);
 
+#define FLAREBIN_PROB_CLIP_TOL 1e-12
+
+typedef struct {
+  double dThreshold;
+} FLAREBINTHRESHCTX;
+
 static void fvFlareBinCopyArray(double **daDest, const double *daSrc, int iSize,
                                  const char *cName) {
   double *daTmp;
@@ -560,11 +566,6 @@ void ReadFlareBinFXUVThresh1(BODY *body, CONTROL *control, FILES *files,
   (void)system;
   fbReadFlareBinDouble(control, files, options, iFile,
                        &body[iBody].dFlareBinFXUVThresh1);
-
-  if (body[iBody].dFlareBinFXUVThresh1 < 0) {
-    fvFlareBinOptionError(control, files, options, iFile, options->iLine[iFile],
-                          "must be >= 0.");
-  }
 }
 
 void ReadFlareBinFXUVThresh2(BODY *body, CONTROL *control, FILES *files,
@@ -574,11 +575,6 @@ void ReadFlareBinFXUVThresh2(BODY *body, CONTROL *control, FILES *files,
   (void)system;
   fbReadFlareBinDouble(control, files, options, iFile,
                        &body[iBody].dFlareBinFXUVThresh2);
-
-  if (body[iBody].dFlareBinFXUVThresh2 < 0) {
-    fvFlareBinOptionError(control, files, options, iFile, options->iLine[iFile],
-                          "must be >= 0.");
-  }
 }
 
 void InitializeOptionsFlareBin(OPTIONS *options, fnReadOption fnRead[]) {
@@ -875,10 +871,11 @@ void InitializeOptionsFlareBin(OPTIONS *options, fnReadOption fnRead[]) {
   fnRead[OPT_FLAREBINBANDP]             = &ReadFlareBinBandP;
 
   fvFormattedString(&options[OPT_FLAREBINFXUVTHRESH1].cName, "dFlareBinFXUVThresh1");
-  fvFormattedString(&options[OPT_FLAREBINFXUVTHRESH1].cDescr, "Diagnostic FXUV threshold 1");
-  fvFormattedString(&options[OPT_FLAREBINFXUVTHRESH1].cDefault, "0");
+  fvFormattedString(&options[OPT_FLAREBINFXUVTHRESH1].cDescr,
+                    "Diagnostic FXUV threshold 1 (<0 disables output, sentinel=-1)");
+  fvFormattedString(&options[OPT_FLAREBINFXUVTHRESH1].cDefault, "-1");
   fvFormattedString(&options[OPT_FLAREBINFXUVTHRESH1].cDimension, "energy/time/area");
-  options[OPT_FLAREBINFXUVTHRESH1].dDefault   = 0;
+  options[OPT_FLAREBINFXUVTHRESH1].dDefault   = -1;
   options[OPT_FLAREBINFXUVTHRESH1].iType      = 2;
   options[OPT_FLAREBINFXUVTHRESH1].bMultiFile = 1;
   options[OPT_FLAREBINFXUVTHRESH1].iModuleBit = FLAREBIN;
@@ -886,10 +883,11 @@ void InitializeOptionsFlareBin(OPTIONS *options, fnReadOption fnRead[]) {
   fnRead[OPT_FLAREBINFXUVTHRESH1]             = &ReadFlareBinFXUVThresh1;
 
   fvFormattedString(&options[OPT_FLAREBINFXUVTHRESH2].cName, "dFlareBinFXUVThresh2");
-  fvFormattedString(&options[OPT_FLAREBINFXUVTHRESH2].cDescr, "Diagnostic FXUV threshold 2");
-  fvFormattedString(&options[OPT_FLAREBINFXUVTHRESH2].cDefault, "0");
+  fvFormattedString(&options[OPT_FLAREBINFXUVTHRESH2].cDescr,
+                    "Diagnostic FXUV threshold 2 (<0 disables output, sentinel=-1)");
+  fvFormattedString(&options[OPT_FLAREBINFXUVTHRESH2].cDefault, "-1");
   fvFormattedString(&options[OPT_FLAREBINFXUVTHRESH2].cDimension, "energy/time/area");
-  options[OPT_FLAREBINFXUVTHRESH2].dDefault   = 0;
+  options[OPT_FLAREBINFXUVTHRESH2].dDefault   = -1;
   options[OPT_FLAREBINFXUVTHRESH2].iType      = 2;
   options[OPT_FLAREBINFXUVTHRESH2].bMultiFile = 1;
   options[OPT_FLAREBINFXUVTHRESH2].iModuleBit = FLAREBIN;
@@ -1223,8 +1221,80 @@ void VerifyHaltFlareBin(BODY *body, CONTROL *control, OPTIONS *options,
   (void)iHalt;
 }
 
-/* Until flarebin precompute is implemented, these writers report cached BODY
- * fields that are initialized deterministically (typically 0). */
+static int fiFlareBinFindUniqueSourceStar(BODY *body, CONTROL *control) {
+  int i;
+  int iStar = -1;
+
+  for (i = 0; i < control->Evolve.iNumBodies; i++) {
+    if (body[i].bStellar && body[i].bFlareBin) {
+      if (iStar >= 0) {
+        return -1;
+      }
+      iStar = i;
+    }
+  }
+
+  return iStar;
+}
+
+static int fbFlareBinPlanetDiagContext(BODY *body, CONTROL *control, int iBody,
+                                       int *iStar) {
+  if (iBody < 0 || iBody >= control->Evolve.iNumBodies || body[iBody].bStellar) {
+    return 0;
+  }
+
+  *iStar = fiFlareBinFindUniqueSourceStar(body, control);
+  return *iStar >= 0;
+}
+
+static void fvFlareBinWriteFXUVUnits(OUTPUT *output, int iBody, double *dTmp,
+                                     char **cUnit) {
+  if (output->bDoNeg[iBody]) {
+    *dTmp *= output->dNeg;
+    fvFormattedString(cUnit, output->cNeg);
+  } else {
+    fvFormattedString(cUnit, "W/m^2");
+  }
+}
+
+static double fdFlareBinIndicatorAboveThreshold(double dFXUV, void *pContext) {
+  FLAREBINTHRESHCTX *context = (FLAREBINTHRESHCTX *)pContext;
+
+  if (dFXUV > context->dThreshold) {
+    return 1.0;
+  }
+  return 0.0;
+}
+
+static double fdFlareBinClampProbability(double dProb) {
+  if (dProb < 0 && fabs(dProb) <= FLAREBIN_PROB_CLIP_TOL) {
+    dProb = 0;
+  }
+  if (dProb > 1.0 && fabs(dProb - 1.0) <= FLAREBIN_PROB_CLIP_TOL) {
+    dProb = 1.0;
+  }
+
+  if (dProb < 0) {
+    dProb = 0;
+  }
+  if (dProb > 1.0) {
+    dProb = 1.0;
+  }
+
+  return dProb;
+}
+
+static double fdFlareBinProbFXUVAboveThreshold(BODY *body, SYSTEM *system,
+                                                int iStar, int iBody,
+                                                double dThreshold) {
+  FLAREBINTHRESHCTX context;
+
+  context.dThreshold = dThreshold;
+  return fdFlareBinClampProbability(fdFlareBinExpectFunction(
+      body, system, iStar, iBody, fdFlareBinIndicatorAboveThreshold, &context));
+}
+
+/* FLAREBIN writers expose deterministic cached and expectation-based outputs. */
 static void WriteLXUVMeanFlareBin(BODY *body, CONTROL *control, OUTPUT *output,
                                   SYSTEM *system, UNITS *units, UPDATE *update,
                                   int iBody, double *dTmp, char **cUnit) {
@@ -1303,6 +1373,108 @@ static void WriteFlareBinITemplate(BODY *body, CONTROL *control, OUTPUT *output,
   fvFormattedString(cUnit, "");
 }
 
+static void WriteFXUVMeanFlareBin(BODY *body, CONTROL *control, OUTPUT *output,
+                                  SYSTEM *system, UNITS *units, UPDATE *update,
+                                  int iBody, double *dTmp, char **cUnit) {
+  int iStar;
+
+  (void)units;
+  (void)update;
+  if (!fbFlareBinPlanetDiagContext(body, control, iBody, &iStar)) {
+    *dTmp = FLAREBIN_OUTPUT_SENTINEL_DISABLED;
+    fvFormattedString(cUnit, "");
+    return;
+  }
+
+  *dTmp = fdFlareBinMeanFXUV(body, system, iStar, iBody);
+  fvFlareBinWriteFXUVUnits(output, iBody, dTmp, cUnit);
+}
+
+static void WriteFXUVQuiescentFlareBin(BODY *body, CONTROL *control,
+                                       OUTPUT *output, SYSTEM *system,
+                                       UNITS *units, UPDATE *update, int iBody,
+                                       double *dTmp, char **cUnit) {
+  int iStar;
+  double dLbar;
+  double dFXUVMean;
+
+  (void)units;
+  (void)update;
+  if (!fbFlareBinPlanetDiagContext(body, control, iBody, &iStar)) {
+    *dTmp = FLAREBIN_OUTPUT_SENTINEL_DISABLED;
+    fvFormattedString(cUnit, "");
+    return;
+  }
+
+  fvFlareBinPrecompute(body, system, iStar, body[iStar].dAge);
+
+  dLbar     = body[iStar].dLXUV;
+  dFXUVMean = fdFlareBinMeanFXUV(body, system, iStar, iBody);
+  if (dLbar > 0) {
+    *dTmp = dFXUVMean * body[iStar].dFlareBinLQ / dLbar;
+  } else {
+    *dTmp = 0;
+  }
+
+  fvFlareBinWriteFXUVUnits(output, iBody, dTmp, cUnit);
+}
+
+static void WriteFlareBinPFXUVAbove1(BODY *body, CONTROL *control,
+                                     OUTPUT *output, SYSTEM *system,
+                                     UNITS *units, UPDATE *update, int iBody,
+                                     double *dTmp, char **cUnit) {
+  int iStar;
+  double dThresh;
+
+  (void)output;
+  (void)system;
+  (void)units;
+  (void)update;
+  if (!fbFlareBinPlanetDiagContext(body, control, iBody, &iStar)) {
+    *dTmp = FLAREBIN_OUTPUT_SENTINEL_DISABLED;
+    fvFormattedString(cUnit, "");
+    return;
+  }
+
+  dThresh = body[iStar].dFlareBinFXUVThresh1;
+  if (dThresh < 0) {
+    *dTmp = FLAREBIN_OUTPUT_SENTINEL_DISABLED;
+    fvFormattedString(cUnit, "");
+    return;
+  }
+
+  *dTmp = fdFlareBinProbFXUVAboveThreshold(body, system, iStar, iBody, dThresh);
+  fvFormattedString(cUnit, "");
+}
+
+static void WriteFlareBinPFXUVAbove2(BODY *body, CONTROL *control,
+                                     OUTPUT *output, SYSTEM *system,
+                                     UNITS *units, UPDATE *update, int iBody,
+                                     double *dTmp, char **cUnit) {
+  int iStar;
+  double dThresh;
+
+  (void)output;
+  (void)system;
+  (void)units;
+  (void)update;
+  if (!fbFlareBinPlanetDiagContext(body, control, iBody, &iStar)) {
+    *dTmp = FLAREBIN_OUTPUT_SENTINEL_DISABLED;
+    fvFormattedString(cUnit, "");
+    return;
+  }
+
+  dThresh = body[iStar].dFlareBinFXUVThresh2;
+  if (dThresh < 0) {
+    *dTmp = FLAREBIN_OUTPUT_SENTINEL_DISABLED;
+    fvFormattedString(cUnit, "");
+    return;
+  }
+
+  *dTmp = fdFlareBinProbFXUVAboveThreshold(body, system, iStar, iBody, dThresh);
+  fvFormattedString(cUnit, "");
+}
+
 void InitializeOutputFlareBin(OUTPUT *output, fnWriteOutput fnWrite[]) {
   fvFormattedString(&output[OUT_FLAREBINLXUVMEAN].cName, "LXUVMean");
   fvFormattedString(&output[OUT_FLAREBINLXUVMEAN].cDescr,
@@ -1368,6 +1540,44 @@ void InitializeOutputFlareBin(OUTPUT *output, fnWriteOutput fnWrite[]) {
   output[OUT_FLAREBINITEMPLATE].iNum       = 1;
   output[OUT_FLAREBINITEMPLATE].iModuleBit = FLAREBIN;
   fnWrite[OUT_FLAREBINITEMPLATE]           = &WriteFlareBinITemplate;
+
+  fvFormattedString(&output[OUT_FLAREBINFXUVMEAN].cName, "FXUVMean");
+  fvFormattedString(&output[OUT_FLAREBINFXUVMEAN].cDescr,
+                    "Planet mean XUV flux convenience output (matches FXUV)");
+  fvFormattedString(&output[OUT_FLAREBINFXUVMEAN].cNeg, "W/m^2");
+  output[OUT_FLAREBINFXUVMEAN].bNeg       = 1;
+  output[OUT_FLAREBINFXUVMEAN].dNeg       = 1;
+  output[OUT_FLAREBINFXUVMEAN].iNum       = 1;
+  output[OUT_FLAREBINFXUVMEAN].iModuleBit = FLAREBIN;
+  fnWrite[OUT_FLAREBINFXUVMEAN]           = &WriteFXUVMeanFlareBin;
+
+  fvFormattedString(&output[OUT_FLAREBINFXUVQUIESCENT].cName, "FXUVQuiescent");
+  fvFormattedString(&output[OUT_FLAREBINFXUVQUIESCENT].cDescr,
+                    "Planet quiescent XUV flux L_q/(4 pi a^2)");
+  fvFormattedString(&output[OUT_FLAREBINFXUVQUIESCENT].cNeg, "W/m^2");
+  output[OUT_FLAREBINFXUVQUIESCENT].bNeg       = 1;
+  output[OUT_FLAREBINFXUVQUIESCENT].dNeg       = 1;
+  output[OUT_FLAREBINFXUVQUIESCENT].iNum       = 1;
+  output[OUT_FLAREBINFXUVQUIESCENT].iModuleBit = FLAREBIN;
+  fnWrite[OUT_FLAREBINFXUVQUIESCENT]           = &WriteFXUVQuiescentFlareBin;
+
+  fvFormattedString(&output[OUT_FLAREBINPFXUVABOVE1].cName,
+                    "FlareBinPFXUVAbove1");
+  fvFormattedString(&output[OUT_FLAREBINPFXUVABOVE1].cDescr,
+                    "P(FXUV > dFlareBinFXUVThresh1); -1 when threshold < 0");
+  output[OUT_FLAREBINPFXUVABOVE1].bNeg       = 0;
+  output[OUT_FLAREBINPFXUVABOVE1].iNum       = 1;
+  output[OUT_FLAREBINPFXUVABOVE1].iModuleBit = FLAREBIN;
+  fnWrite[OUT_FLAREBINPFXUVABOVE1]           = &WriteFlareBinPFXUVAbove1;
+
+  fvFormattedString(&output[OUT_FLAREBINPFXUVABOVE2].cName,
+                    "FlareBinPFXUVAbove2");
+  fvFormattedString(&output[OUT_FLAREBINPFXUVABOVE2].cDescr,
+                    "P(FXUV > dFlareBinFXUVThresh2); -1 when threshold < 0");
+  output[OUT_FLAREBINPFXUVABOVE2].bNeg       = 0;
+  output[OUT_FLAREBINPFXUVABOVE2].iNum       = 1;
+  output[OUT_FLAREBINPFXUVABOVE2].iModuleBit = FLAREBIN;
+  fnWrite[OUT_FLAREBINPFXUVABOVE2]           = &WriteFlareBinPFXUVAbove2;
 }
 
 void LogOptionsFlareBin(CONTROL *control, FILE *fp) {
