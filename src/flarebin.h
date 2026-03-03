@@ -130,4 +130,9 @@ double fdFlareBinExpectFunction(BODY *, SYSTEM *, int, int,
                                 double (*)(double, void *), void *);
 double fdFlareBinExpectAtmEscRhs(BODY *, SYSTEM *, int, int);
 
+/* Davenport template helpers */
+double fdFlareTpl(double);
+double fdFlareTplIntegral(double, double);
+double fdFlareTplIntegralSq(double, double);
+
 /* @endcond */
