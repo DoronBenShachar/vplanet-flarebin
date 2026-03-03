@@ -22,17 +22,17 @@ cp flarebin_smoke.star.forward flarebin_smoke.star.forward.run1
 cmp -s flarebin_smoke.log flarebin_smoke.log.run1
 cmp -s flarebin_smoke.star.forward flarebin_smoke.star.forward.run1
 
-if rg -n -i '(^|[^a-z])nan([^a-z]|$)|(^|[^a-z])inf([^a-z]|$)' \
+if grep -E -n -i '(^|[^[:alpha:]])nan([^[:alpha:]]|$)|(^|[^[:alpha:]])inf([^[:alpha:]]|$)' \
   flarebin_smoke.log flarebin_smoke.star.forward run1.stderr run2.stderr; then
   echo "Found NaN/Inf in flarebin outputs."
   exit 1
 fi
 
-rg -q 'Active Modules: (FLAREBIN STELLAR|STELLAR FLAREBIN)' flarebin_smoke.log
-rg -q 'FlareBinPStoch' flarebin_smoke.log
-rg -q 'FlareBinMuActive' flarebin_smoke.log
-rg -q 'FlareBinPAnyActive' flarebin_smoke.log
-rg -q 'FlareBinEStochMin' flarebin_smoke.log
-rg -q 'FlareBinItemplate' flarebin_smoke.log
+grep -E -q 'Active Modules: (FLAREBIN STELLAR|STELLAR FLAREBIN)' flarebin_smoke.log
+grep -F -q 'FlareBinPStoch' flarebin_smoke.log
+grep -F -q 'FlareBinMuActive' flarebin_smoke.log
+grep -F -q 'FlareBinPAnyActive' flarebin_smoke.log
+grep -F -q 'FlareBinEStochMin' flarebin_smoke.log
+grep -F -q 'FlareBinItemplate' flarebin_smoke.log
 
 echo "Flarebin smoke and determinism checks passed."
