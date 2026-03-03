@@ -3965,6 +3965,89 @@ void AddModuleAtmEsc(CONTROL *control, MODULE *module, int iBody, int iModule) {
 
 /************* ATMESC Functions ************/
 
+typedef enum {
+  ATMESC_RHS_COMPONENT_DSURFWATERDT = 0,
+  ATMESC_RHS_COMPONENT_DOXYGENDT = 1,
+  ATMESC_RHS_COMPONENT_DOXYGENMANTLEDT = 2,
+  ATMESC_RHS_COMPONENT_DENVELOPEDT = 3,
+  ATMESC_RHS_COMPONENT_DENVELOPEDTBONDI = 4,
+  ATMESC_RHS_COMPONENT_DENVELOPEDTRR = 5
+} ATMESC_RHS_COMPONENT;
+
+typedef struct ATMESC_FLAREBIN_CONTEXT {
+  const BODY *body;
+  const SYSTEM *system;
+  int iBody;
+  ATMESC_RHS_COMPONENT iComponent;
+} ATMESC_FLAREBIN_CONTEXT;
+
+static double fdAtmEscRhsComponent(const ATMESC_RHS *rhs,
+                                   ATMESC_RHS_COMPONENT iComponent) {
+  switch (iComponent) {
+  case ATMESC_RHS_COMPONENT_DSURFWATERDT:
+    return rhs->dSurfaceWaterMassDt;
+  case ATMESC_RHS_COMPONENT_DOXYGENDT:
+    return rhs->dOxygenMassDt;
+  case ATMESC_RHS_COMPONENT_DOXYGENMANTLEDT:
+    return rhs->dOxygenMantleMassDt;
+  case ATMESC_RHS_COMPONENT_DENVELOPEDT:
+    return rhs->dEnvelopeMassDt;
+  case ATMESC_RHS_COMPONENT_DENVELOPEDTBONDI:
+    return rhs->dEnvelopeMassDtBondiLimited;
+  case ATMESC_RHS_COMPONENT_DENVELOPEDTRR:
+    return rhs->dEnvelopeMassDtRRLimited;
+  default:
+    return 0;
+  }
+}
+
+static double fdAtmEscRhsCallbackAtFXUV(double dFXUV, void *pvContext) {
+  ATMESC_FLAREBIN_CONTEXT *context = (ATMESC_FLAREBIN_CONTEXT *)pvContext;
+  ATMESC_RHS rhs = AtmEscRhsGivenFXUV(context->body, context->system,
+                                      context->iBody, dFXUV);
+  return fdAtmEscRhsComponent(&rhs, context->iComponent);
+}
+
+static int fbAtmEscUseFlareBinForPlanet(const BODY *body, const SYSTEM *system,
+                                        int iBody, int *iStar) {
+  (void)system;
+
+  if (iStar == NULL) {
+    return 0;
+  }
+
+  /*
+   * Match ATMESC/system single-star host convention: body[0] is the source
+   * star for XUV flux in the non-binary path.
+   */
+  if (iBody <= 0 || !body[0].bStellar || !body[0].bFlareBin) {
+    return 0;
+  }
+
+  *iStar = 0;
+  return 1;
+}
+
+static double fdAtmEscEffectiveRhsComponent(BODY *body, SYSTEM *system,
+                                            int iBody,
+                                            ATMESC_RHS_COMPONENT iComponent) {
+  int iStar;
+  ATMESC_RHS rhs;
+
+  if (fbAtmEscUseFlareBinForPlanet(body, system, iBody, &iStar)) {
+    ATMESC_FLAREBIN_CONTEXT context;
+    context.body       = body;
+    context.system     = system;
+    context.iBody      = iBody;
+    context.iComponent = iComponent;
+    return fdFlareBinExpectFunction(body, system, iStar, iBody,
+                                    fdAtmEscRhsCallbackAtFXUV, &context);
+  }
+
+  rhs = AtmEscRhsGivenFXUV(body, system, iBody, body[iBody].dFXUV);
+  return fdAtmEscRhsComponent(&rhs, iComponent);
+}
+
 /**
 Side-effect-free water escape predicate used by the pure RHS evaluation.
 
@@ -4267,9 +4350,8 @@ The rate of change of the surface water mass.
 @param iaBody An array of body indices. The current body is index 0.
 */
 double fdDSurfaceWaterMassDt(BODY *body, SYSTEM *system, int *iaBody) {
-  ATMESC_RHS rhs =
-        AtmEscRhsGivenFXUV(body, system, iaBody[0], body[iaBody[0]].dFXUV);
-  return rhs.dSurfaceWaterMassDt;
+  return fdAtmEscEffectiveRhsComponent(
+      body, system, iaBody[0], ATMESC_RHS_COMPONENT_DSURFWATERDT);
 }
 
 /**
@@ -4280,9 +4362,8 @@ The rate of change of the oxygen mass in the atmosphere.
 @param iaBody An array of body indices. The current body is index 0.
 */
 double fdDOxygenMassDt(BODY *body, SYSTEM *system, int *iaBody) {
-  ATMESC_RHS rhs =
-        AtmEscRhsGivenFXUV(body, system, iaBody[0], body[iaBody[0]].dFXUV);
-  return rhs.dOxygenMassDt;
+  return fdAtmEscEffectiveRhsComponent(
+      body, system, iaBody[0], ATMESC_RHS_COMPONENT_DOXYGENDT);
 }
 
 /**
@@ -4293,9 +4374,8 @@ The rate of change of the oxygen mass in the mantle.
 @param iaBody An array of body indices. The current body is index 0.
 */
 double fdDOxygenMantleMassDt(BODY *body, SYSTEM *system, int *iaBody) {
-  ATMESC_RHS rhs =
-        AtmEscRhsGivenFXUV(body, system, iaBody[0], body[iaBody[0]].dFXUV);
-  return rhs.dOxygenMantleMassDt;
+  return fdAtmEscEffectiveRhsComponent(
+      body, system, iaBody[0], ATMESC_RHS_COMPONENT_DOXYGENMANTLEDT);
 }
 
 /**
@@ -4307,9 +4387,8 @@ The rate of change of the envelope mass given energy-limited escape.
 
 */
 double fdDEnvelopeMassDt(BODY *body, SYSTEM *system, int *iaBody) {
-  ATMESC_RHS rhs =
-        AtmEscRhsGivenFXUV(body, system, iaBody[0], body[iaBody[0]].dFXUV);
-  return rhs.dEnvelopeMassDt;
+  return fdAtmEscEffectiveRhsComponent(
+      body, system, iaBody[0], ATMESC_RHS_COMPONENT_DENVELOPEDT);
 }
 
 
@@ -4322,9 +4401,8 @@ The rate of change of the envelope mass given Bondi-limited escape.
 
 */
 double fdDEnvelopeMassDtBondiLimited(BODY *body, SYSTEM *system, int *iaBody) {
-  ATMESC_RHS rhs =
-        AtmEscRhsGivenFXUV(body, system, iaBody[0], body[iaBody[0]].dFXUV);
-  return rhs.dEnvelopeMassDtBondiLimited;
+  return fdAtmEscEffectiveRhsComponent(
+      body, system, iaBody[0], ATMESC_RHS_COMPONENT_DENVELOPEDTBONDI);
 }
 
 /**
@@ -4337,9 +4415,8 @@ escape.
 
 */
 double fdDEnvelopeMassDtRRLimited(BODY *body, SYSTEM *system, int *iaBody) {
-  ATMESC_RHS rhs =
-        AtmEscRhsGivenFXUV(body, system, iaBody[0], body[iaBody[0]].dFXUV);
-  return rhs.dEnvelopeMassDtRRLimited;
+  return fdAtmEscEffectiveRhsComponent(
+      body, system, iaBody[0], ATMESC_RHS_COMPONENT_DENVELOPEDTRR);
 }
 
 /**
