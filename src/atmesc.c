@@ -74,6 +74,13 @@ void BodyCopyAtmEsc(BODY *dest, BODY *src, int foo, int iNumBodies, int iBody) {
   dest[iBody].dEnvMassDt           = src[iBody].dEnvMassDt;
   dest[iBody].bAutoThermTemp       = src[iBody].bAutoThermTemp;
   dest[iBody].bStopWaterLossInHZ   = src[iBody].bStopWaterLossInHZ;
+  dest[iBody].bAtmEscFlareBinRhsValid = 0;
+  dest[iBody].dAtmEscFlareBinDSurfaceWaterMassDt = 0;
+  dest[iBody].dAtmEscFlareBinDOxygenMassDt = 0;
+  dest[iBody].dAtmEscFlareBinDOxygenMantleMassDt = 0;
+  dest[iBody].dAtmEscFlareBinDEnvelopeMassDt = 0;
+  dest[iBody].dAtmEscFlareBinDEnvelopeMassDtBondiLimited = 0;
+  dest[iBody].dAtmEscFlareBinDEnvelopeMassDtRRLimited = 0;
 }
 
 /**************** ATMESC options ********************/
@@ -4101,6 +4108,33 @@ static double fdAtmEscRhsComponent(const ATMESC_RHS *rhs,
   }
 }
 
+static void fvAtmEscStoreFlareBinRhsCache(BODY *body, int iBody,
+                                          const ATMESC_RHS *rhs) {
+  body[iBody].bAtmEscFlareBinRhsValid = 1;
+  body[iBody].dAtmEscFlareBinDSurfaceWaterMassDt = rhs->dSurfaceWaterMassDt;
+  body[iBody].dAtmEscFlareBinDOxygenMassDt = rhs->dOxygenMassDt;
+  body[iBody].dAtmEscFlareBinDOxygenMantleMassDt = rhs->dOxygenMantleMassDt;
+  body[iBody].dAtmEscFlareBinDEnvelopeMassDt = rhs->dEnvelopeMassDt;
+  body[iBody].dAtmEscFlareBinDEnvelopeMassDtBondiLimited =
+      rhs->dEnvelopeMassDtBondiLimited;
+  body[iBody].dAtmEscFlareBinDEnvelopeMassDtRRLimited =
+      rhs->dEnvelopeMassDtRRLimited;
+}
+
+static ATMESC_RHS fsAtmEscLoadFlareBinRhsCache(const BODY *body, int iBody) {
+  ATMESC_RHS rhs;
+
+  rhs.dSurfaceWaterMassDt = body[iBody].dAtmEscFlareBinDSurfaceWaterMassDt;
+  rhs.dOxygenMassDt = body[iBody].dAtmEscFlareBinDOxygenMassDt;
+  rhs.dOxygenMantleMassDt = body[iBody].dAtmEscFlareBinDOxygenMantleMassDt;
+  rhs.dEnvelopeMassDt = body[iBody].dAtmEscFlareBinDEnvelopeMassDt;
+  rhs.dEnvelopeMassDtBondiLimited =
+      body[iBody].dAtmEscFlareBinDEnvelopeMassDtBondiLimited;
+  rhs.dEnvelopeMassDtRRLimited =
+      body[iBody].dAtmEscFlareBinDEnvelopeMassDtRRLimited;
+  return rhs;
+}
+
 static double fdAtmEscRhsCallbackAtFXUV(double dFXUV, void *pvContext) {
   ATMESC_FLAREBIN_CONTEXT *context = (ATMESC_FLAREBIN_CONTEXT *)pvContext;
   ATMESC_RHS rhs = AtmEscRhsGivenFXUV(context->body, context->system,
@@ -4135,13 +4169,12 @@ static double fdAtmEscEffectiveRhsComponent(BODY *body, SYSTEM *system,
   ATMESC_RHS rhs;
 
   if (fbAtmEscUseFlareBinForPlanet(body, system, iBody, &iStar)) {
-    ATMESC_FLAREBIN_CONTEXT context;
-    context.body       = body;
-    context.system     = system;
-    context.iBody      = iBody;
-    context.iComponent = iComponent;
-    return fdFlareBinExpectFunction(body, system, iStar, iBody,
-                                    fdAtmEscRhsCallbackAtFXUV, &context);
+    if (!body[iBody].bAtmEscFlareBinRhsValid) {
+      ATMESC_RHS rhsEff = fsFlareBinExpectAtmEscRhs(body, system, iStar, iBody);
+      fvAtmEscStoreFlareBinRhsCache(body, iBody, &rhsEff);
+    }
+    rhs = fsAtmEscLoadFlareBinRhsCache(body, iBody);
+    return fdAtmEscRhsComponent(&rhs, iComponent);
   }
 
   rhs = AtmEscRhsGivenFXUV(body, system, iBody, body[iBody].dFXUV);

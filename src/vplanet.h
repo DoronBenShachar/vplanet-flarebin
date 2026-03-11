@@ -933,6 +933,8 @@ struct BODY {
   double dFlareBinBandP;      /**< Bandpass conversion exponent */
   double dFlareBinFXUVThresh1; /**< Optional FXUV diagnostic threshold #1 */
   double dFlareBinFXUVThresh2; /**< Optional FXUV diagnostic threshold #2 */
+  double dFlareBinDavenportA;  /**< Cached Davenport cumulative slope a(t) */
+  double dFlareBinDavenportB;  /**< Cached Davenport cumulative intercept b(t) */
 
   /* Derived/cached values from precompute */
   double dFlareBinLQ;                /**< Quiescent luminosity L_q */
@@ -941,6 +943,10 @@ struct BODY {
   double dFlareBinITpl;              /**< Template normalization integral */
   double dFlareBinDeltaX;            /**< Template support width */
   double dFlareBinLastPrecomputeAge; /**< Last precompute timestamp/age */
+  double *daFlareBinRateAtE;         /**< Cached rate density at quadrature E */
+  double *daFlareBinEnergyXUVAtE;    /**< Cached XUV energy conversion at E */
+  double *daFlareBinAmpLumAtE;       /**< Cached luminosity amplitude factor */
+  double *daFlareBinOverlapWeightAtE; /**< Cached w_E r(E) tau(E) factor */
 
   /* Cached deterministic quadrature grids */
   int iFlareBinNEnergy; /**< Cached energy grid size */
@@ -952,6 +958,14 @@ struct BODY {
   double *daFlareBinQuadX;   /**< phase nodes */
   double *daFlareBinQuadWX;  /**< phase weights */
   double *daFlareBinTplAtX;  /**< template values evaluated at phase nodes */
+
+  int bAtmEscFlareBinRhsValid;            /**< Cached effective RHS valid flag */
+  double dAtmEscFlareBinDSurfaceWaterMassDt; /**< Cached flare-averaged dMwater/dt */
+  double dAtmEscFlareBinDOxygenMassDt;       /**< Cached flare-averaged dMO2/dt */
+  double dAtmEscFlareBinDOxygenMantleMassDt; /**< Cached flare-averaged dMO2mantle/dt */
+  double dAtmEscFlareBinDEnvelopeMassDt;     /**< Cached flare-averaged dMenv/dt */
+  double dAtmEscFlareBinDEnvelopeMassDtBondiLimited; /**< Cached Bondi-limited dMenv/dt */
+  double dAtmEscFlareBinDEnvelopeMassDtRRLimited;    /**< Cached RR-limited dMenv/dt */
 
   // GALHABIT
   int bGalHabit;        /**< Use galhabit module */

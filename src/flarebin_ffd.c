@@ -6,9 +6,22 @@
 
 #include "vplanet.h"
 
+#define FLAREBIN_DAVENPORT_A1 (-0.07)
+#define FLAREBIN_DAVENPORT_A2 (0.79)
+#define FLAREBIN_DAVENPORT_A3 (-1.06)
+#define FLAREBIN_DAVENPORT_B1 (2.01)
+#define FLAREBIN_DAVENPORT_B2 (-25.15)
+#define FLAREBIN_DAVENPORT_B3 (33.99)
+
 static void fvFlareBinNotImplemented(const char *cFeature) {
   fprintf(stderr, "FLAREBIN not implemented: %s\n", cFeature);
   abort();
+}
+
+static void fvFlareBinFatal(const char *cMessage, int iStar, double dValue) {
+  fprintf(stderr, "ERROR: FLAREBIN body %d: %s (value=%.16e).\n", iStar,
+          cMessage, dValue);
+  exit(EXIT_FAILURE);
 }
 
 static int fbFlareBinUseCumulativeAnchor(const BODY *body, int iStar) {
@@ -26,6 +39,10 @@ static double fdFlareBinPowerLawAlpha(const BODY *body, int iStar) {
 
 static double fdFlareBinPowerLawK(const BODY *body, int iStar) {
   if (body[iStar].iFlareBinNormMode == FLAREBIN_NORM_FROM_FFD) {
+    return body[iStar].dFlareBinK;
+  }
+
+  if (body[iStar].iFlareBinNormMode == FLAREBIN_NORM_DAVENPORT2019) {
     return body[iStar].dFlareBinK;
   }
 
@@ -68,6 +85,79 @@ static double fdFlareBinRateDensityPowerLawCore(const BODY *body, int iStar,
 
   dAlpha = fdFlareBinPowerLawAlpha(body, iStar);
   return dK * pow(dEin, -dAlpha);
+}
+
+static void fvFlareBinSetDavenportFfd(BODY *body, int iStar, double dTimeEval) {
+  double dTimeMyr;
+  double dMassSolar;
+  double dA;
+  double dB;
+  double dLog10K;
+  double dK;
+
+  if (!isfinite(dTimeEval) || dTimeEval <= 0) {
+    fprintf(stderr,
+            "ERROR: FLAREBIN Davenport2019 on body %d requires positive "
+            "stellar age at evaluation (dAge > 0). Set a positive initial age.\n",
+            iStar);
+    exit(EXIT_FAILURE);
+  }
+
+  dTimeMyr = dTimeEval / (1.0e6 * YEARSEC);
+  if (!isfinite(dTimeMyr) || dTimeMyr <= 0) {
+    fvFlareBinFatal(
+        "invalid stellar age for Davenport2019 after conversion to Myr", iStar,
+        dTimeMyr);
+  }
+
+  dMassSolar = body[iStar].dMass / MSUN;
+  if (!isfinite(dMassSolar) || dMassSolar <= 0) {
+    fvFlareBinFatal("invalid stellar mass for Davenport2019 in solar masses",
+                    iStar, dMassSolar);
+  }
+
+  dA = FLAREBIN_DAVENPORT_A1 * log10(dTimeMyr) +
+       FLAREBIN_DAVENPORT_A2 * dMassSolar + FLAREBIN_DAVENPORT_A3;
+  dB = FLAREBIN_DAVENPORT_B1 * log10(dTimeMyr) +
+       FLAREBIN_DAVENPORT_B2 * dMassSolar + FLAREBIN_DAVENPORT_B3;
+
+  if (!isfinite(dA) || !isfinite(dB)) {
+    fprintf(stderr,
+            "ERROR: FLAREBIN Davenport2019 produced non-finite FFD coefficients "
+            "on body %d (a=%.16e, b=%.16e).\n",
+            iStar, dA, dB);
+    exit(EXIT_FAILURE);
+  }
+
+  if (dA >= 0) {
+    fprintf(stderr,
+            "ERROR: FLAREBIN Davenport2019 on body %d produced non-physical "
+            "cumulative slope a=%.16e (must be < 0).\n",
+            iStar, dA);
+    exit(EXIT_FAILURE);
+  }
+
+  /* Davenport et al. (2019):
+   *   log10 nu = a log10 eps + b, with eps in erg and nu in flares/day.
+   * Differential density in SI (events/s/J) written as r(E) = k E^{-alpha}:
+   *   alpha = 1 - a
+   *   log10(k) = log10(-a) + b + 7*a - log10(DAYSEC)
+   * where log10(eps[erg]) = log10(E[J]) + 7.
+   */
+  dLog10K = log10(-dA) + dB + 7.0 * dA - log10(DAYSEC);
+  if (!isfinite(dLog10K)) {
+    fvFlareBinFatal("invalid Davenport2019 log10(k) conversion", iStar, dLog10K);
+  }
+
+  dK = pow(10.0, dLog10K);
+  if (!isfinite(dK) || dK <= 0) {
+    fvFlareBinFatal("invalid Davenport2019 SI normalization k", iStar, dK);
+  }
+
+  body[iStar].dFlareBinDavenportA = dA;
+  body[iStar].dFlareBinDavenportB = dB;
+  body[iStar].dFlareBinAlpha      = 1.0 - dA;
+  body[iStar].dFlareBinK          = dK;
 }
 
 double fdFlareBinEnergyToXUV(const BODY *body, int iStar, double dEin) {
@@ -118,9 +208,17 @@ double fdFlareBinRateDensity(const BODY *body, int iStar, double dEin,
   return dRate;
 }
 
-void fvFlareBinNormalizeFfd(BODY *body, int iStar) {
+void fvFlareBinNormalizeFfd(BODY *body, int iStar, double dTimeEval) {
   if (body[iStar].iFlareBinDist != FLAREBIN_DIST_POWERLAW) {
     fvFlareBinNotImplemented("Lognormal normalization.");
+  }
+
+  body[iStar].dFlareBinDavenportA = FLAREBIN_OUTPUT_SENTINEL_DISABLED;
+  body[iStar].dFlareBinDavenportB = FLAREBIN_OUTPUT_SENTINEL_DISABLED;
+
+  if (body[iStar].iFlareBinNormMode == FLAREBIN_NORM_DAVENPORT2019) {
+    fvFlareBinSetDavenportFfd(body, iStar, dTimeEval);
+    return;
   }
 
   if (body[iStar].iFlareBinNormMode ==
