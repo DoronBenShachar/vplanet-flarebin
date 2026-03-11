@@ -57,6 +57,8 @@
 #define OUT_FLAREBINPANYACTIVE 2414
 #define OUT_FLAREBINESTOCHMIN 2415
 #define OUT_FLAREBINITEMPLATE 2416
+#define OUT_FLAREBINDAVENPORTA 2417
+#define OUT_FLAREBINDAVENPORTB 2418
 
 #define OUT_FLAREBINFXUVMEAN 2420
 #define OUT_FLAREBINFXUVQUIESCENT 2421
@@ -76,7 +78,8 @@ typedef enum {
 typedef enum {
   FLAREBIN_NORM_FROM_FFD = 0,
   FLAREBIN_NORM_FROM_FLAREPOWER_FRACTION = 1,
-  FLAREBIN_NORM_FROM_RATE_AT_E0 = 2
+  FLAREBIN_NORM_FROM_RATE_AT_E0 = 2,
+  FLAREBIN_NORM_DAVENPORT2019 = 3
 } FLAREBINNORMMODE;
 
 /* Overlap truncation N_max mode */
@@ -132,6 +135,7 @@ double fdFlareBinMeanFXUV(BODY *, SYSTEM *, int, int);
 double fdFlareBinExpectFunction(BODY *, SYSTEM *, int, int,
                                 double (*)(double, void *), void *);
 double fdFlareBinExpectAtmEscRhs(BODY *, SYSTEM *, int, int);
+ATMESC_RHS fsFlareBinExpectAtmEscRhs(BODY *, SYSTEM *, int, int);
 
 /* Davenport template helpers */
 double fdFlareTpl(double);
@@ -142,7 +146,7 @@ double fdFlareTplIntegralSq(double, double);
 double fdFlareBinEnergyToXUV(const BODY *, int, double);
 double fdFlareBinDuration(const BODY *, int, double);
 double fdFlareBinRateDensity(const BODY *, int, double, double);
-void fvFlareBinNormalizeFfd(BODY *, int);
+void fvFlareBinNormalizeFfd(BODY *, int, double);
 double fdFlareBinPowerIntegrand(const BODY *, int, double, double);
 double fdFlareBinOverlapIntegrand(const BODY *, int, double, double);
 double fdFlareBinOverlapSupportIntegrand(const BODY *, int, double, double);

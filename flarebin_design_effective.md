@@ -125,7 +125,8 @@ Population model:
 - `iFlareBinNormMode` (enum):
   - `NORM_FROM_FFD` (use user-provided normalization),
   - `NORM_FROM_FLAREPOWER_FRACTION` (solve normalization so `P_flare = dFlareBinFrac * L̄_XUV`),
-  - `NORM_FROM_RATE_AT_E0` (use `ν(>E0)`).
+  - `NORM_FROM_RATE_AT_E0` (use `ν(>E0)`),
+  - `NORM_DAVENPORT2019` (age-evolving `a(t),b(t)` from Davenport et al. 2019 Eq. 2-3).
 - `dFlareBinFrac` (double): target mean flare power fraction of `L̄_XUV` (only for `NORM_FROM_FLAREPOWER_FRACTION`).
 
 Energy band and bounds:
@@ -154,6 +155,26 @@ Band conversion:
 Diagnostics thresholds (optional):
 - `dFlareBinFXUVThresh1`, `dFlareBinFXUVThresh2` (flux units): optional thresholds used only for output diagnostics (probability of exceeding thresholds), not required for physics integration.
 
+Age-evolving Davenport mode (`NORM_DAVENPORT2019`)
+:
+- Cumulative FFD form (reverse cumulative):
+  `log10 ν = a log10 ε + b` with `ε` in `erg` and `ν` in `flares/day`.
+- Evolution law:
+  `a = a1 log10 t + a2 m + a3`, `b = b1 log10 t + b2 m + b3`,
+  with `t` in `Myr`, `m = M/Msun`.
+- Coefficients (Table 1 medians): `a1=-0.07`, `a2=0.79`, `a3=-1.06`,
+  `b1=2.01`, `b2=-25.15`, `b3=33.99`.
+- Runtime guards:
+  `t > 0` required (`log10 t`), and computed `a < 0` required.
+
+Negative-unit input support
+:
+- Energies (`dFlareBinEmin`, `dFlareBinEmax`, `dFlareBinEStochMin`,
+  `dFlareBinDurE0`): negative values are parsed as `ergs`.
+- Timescale (`dFlareBinTau0`): negative values are parsed as `days`.
+- Rate (`dFlareBinRateTot`): negative values are parsed as `/day`.
+- New diagnostics outputs: `FlareBinDavenportA`, `FlareBinDavenportB`.
+
 ## Algorithm Design
 
 ### 1) Rate density `r(E)`
@@ -168,9 +189,14 @@ Use:
 
 where `k` has units events/time/energy.
 
-If the user provides cumulative form `ν(>E)=10^b E^a` (events/time), then:
+If the user provides cumulative form `ν(>E)=10^b E^a` (with `E` in SI), then:
 - `α = 1 - a`
 - `k = 10^b * (-a)`
+
+For Davenport mode (defined in `erg` and `day` units), flarebin converts exactly
+to SI `r(E[J]) = k E^{-α}` using:
+- `α = 1 - a`
+- `log10(k) = log10(-a) + b + 7*a - log10(DAYSEC)`
 
 Consistency requirements:
 - If `α <= 2` (common for active M dwarfs), `Emax` must be finite to keep the mean power finite.
@@ -521,4 +547,3 @@ Validate:
   Compare indicator-function expectations against Monte Carlo with fixed seed
   Increase (N_E,N_X) until changes are below tolerance
 ```
-

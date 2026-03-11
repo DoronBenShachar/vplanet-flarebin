@@ -70,6 +70,31 @@ static void FlareBinPrecomputeCached(BODY *body, CONTROL *control,
   }
 }
 
+static void AtmEscFlareBinCacheEffectiveRhs(BODY *body, CONTROL *control,
+                                            SYSTEM *system) {
+  int iBody;
+
+  for (iBody = 0; iBody < control->Evolve.iNumBodies; iBody++) {
+    body[iBody].bAtmEscFlareBinRhsValid = 0;
+
+    if (iBody > 0 && body[iBody].bAtmEsc && body[0].bStellar &&
+        body[0].bFlareBin) {
+      ATMESC_RHS rhsEff = fsFlareBinExpectAtmEscRhs(body, system, 0, iBody);
+
+      body[iBody].dAtmEscFlareBinDSurfaceWaterMassDt = rhsEff.dSurfaceWaterMassDt;
+      body[iBody].dAtmEscFlareBinDOxygenMassDt       = rhsEff.dOxygenMassDt;
+      body[iBody].dAtmEscFlareBinDOxygenMantleMassDt =
+          rhsEff.dOxygenMantleMassDt;
+      body[iBody].dAtmEscFlareBinDEnvelopeMassDt = rhsEff.dEnvelopeMassDt;
+      body[iBody].dAtmEscFlareBinDEnvelopeMassDtBondiLimited =
+          rhsEff.dEnvelopeMassDtBondiLimited;
+      body[iBody].dAtmEscFlareBinDEnvelopeMassDtRRLimited =
+          rhsEff.dEnvelopeMassDtRRLimited;
+      body[iBody].bAtmEscFlareBinRhsValid = 1;
+    }
+  }
+}
+
 void fvCumulative(BODY *body,CONTROL *control,SYSTEM *system,double dDt) {
   int iBody;
 
@@ -490,6 +515,7 @@ void RungeKutta4Step(BODY *body, CONTROL *control, SYSTEM *system,
   /* First midpoint derivative.*/
   PropertiesAuxiliary(evolve->tmpBody, control, system, update);
   FlareBinPrecomputeCached(evolve->tmpBody, control, system);
+  AtmEscFlareBinCacheEffectiveRhs(evolve->tmpBody, control, system);
 
   fdGetUpdateInfo(evolve->tmpBody, control, system, evolve->tmpUpdate,
                   fnUpdate);
@@ -539,6 +565,7 @@ void RungeKutta4Step(BODY *body, CONTROL *control, SYSTEM *system,
   /* Second midpoint derivative */
   PropertiesAuxiliary(evolve->tmpBody, control, system, update);
   FlareBinPrecomputeCached(evolve->tmpBody, control, system);
+  AtmEscFlareBinCacheEffectiveRhs(evolve->tmpBody, control, system);
 
   fdGetUpdateInfo(evolve->tmpBody, control, system, evolve->tmpUpdate,
                   fnUpdate);
@@ -588,6 +615,7 @@ void RungeKutta4Step(BODY *body, CONTROL *control, SYSTEM *system,
   /* Full step derivative */
   PropertiesAuxiliary(evolve->tmpBody, control, system, update);
   FlareBinPrecomputeCached(evolve->tmpBody, control, system);
+  AtmEscFlareBinCacheEffectiveRhs(evolve->tmpBody, control, system);
 
   fdGetUpdateInfo(evolve->tmpBody, control, system, evolve->tmpUpdate,
                   fnUpdate);
@@ -670,6 +698,7 @@ void Evolve(BODY *body, CONTROL *control, FILES *files, MODULE *module,
 
   PropertiesAuxiliary(body, control, system, update);
   FlareBinPrecomputeCached(body, control, system);
+  AtmEscFlareBinCacheEffectiveRhs(body, control, system);
   control->Io.dNextOutput = control->Evolve.dTime + control->Io.dOutputTime;
 
   // Get derivatives at start, useful for logging
@@ -755,6 +784,7 @@ void Evolve(BODY *body, CONTROL *control, FILES *files, MODULE *module,
        was prior to loop. */
     PropertiesAuxiliary(body, control, system, update);
     FlareBinPrecomputeCached(body, control, system);
+    AtmEscFlareBinCacheEffectiveRhs(body, control, system);
 
   fvCumulative(body,control,system,dDt);
 

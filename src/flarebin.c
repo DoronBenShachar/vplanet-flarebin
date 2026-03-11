@@ -113,6 +113,8 @@ void BodyCopyFlareBin(BODY *dest, BODY *src, int foo, int iNumBodies,
   dest[iBody].dFlareBinBandP      = src[iBody].dFlareBinBandP;
   dest[iBody].dFlareBinFXUVThresh1 = src[iBody].dFlareBinFXUVThresh1;
   dest[iBody].dFlareBinFXUVThresh2 = src[iBody].dFlareBinFXUVThresh2;
+  dest[iBody].dFlareBinDavenportA  = src[iBody].dFlareBinDavenportA;
+  dest[iBody].dFlareBinDavenportB  = src[iBody].dFlareBinDavenportB;
 
   dest[iBody].dFlareBinLQ                = src[iBody].dFlareBinLQ;
   dest[iBody].dFlareBinPStoch            = src[iBody].dFlareBinPStoch;
@@ -155,6 +157,18 @@ void BodyCopyFlareBin(BODY *dest, BODY *src, int foo, int iNumBodies,
   fvFlareBinVerifyNoAlias(dest[iBody].daFlareBinTplAtX,
                           src[iBody].daFlareBinTplAtX, iSrcNX, iBody,
                           "daFlareBinTplAtX");
+  fvFlareBinVerifyNoAlias(dest[iBody].daFlareBinRateAtE,
+                          src[iBody].daFlareBinRateAtE, iSrcNE, iBody,
+                          "daFlareBinRateAtE");
+  fvFlareBinVerifyNoAlias(dest[iBody].daFlareBinEnergyXUVAtE,
+                          src[iBody].daFlareBinEnergyXUVAtE, iSrcNE, iBody,
+                          "daFlareBinEnergyXUVAtE");
+  fvFlareBinVerifyNoAlias(dest[iBody].daFlareBinAmpLumAtE,
+                          src[iBody].daFlareBinAmpLumAtE, iSrcNE, iBody,
+                          "daFlareBinAmpLumAtE");
+  fvFlareBinVerifyNoAlias(dest[iBody].daFlareBinOverlapWeightAtE,
+                          src[iBody].daFlareBinOverlapWeightAtE, iSrcNE, iBody,
+                          "daFlareBinOverlapWeightAtE");
 
   fvFlareBinCopyArray(&dest[iBody].daFlareBinQuadU, src[iBody].daFlareBinQuadU,
                       dest[iBody].iFlareBinNEnergy, "daFlareBinQuadU");
@@ -174,6 +188,19 @@ void BodyCopyFlareBin(BODY *dest, BODY *src, int foo, int iNumBodies,
   fvFlareBinCopyArray(&dest[iBody].daFlareBinTplAtX,
                       src[iBody].daFlareBinTplAtX,
                       dest[iBody].iFlareBinNPhase, "daFlareBinTplAtX");
+  fvFlareBinCopyArray(&dest[iBody].daFlareBinRateAtE,
+                      src[iBody].daFlareBinRateAtE,
+                      dest[iBody].iFlareBinNEnergy, "daFlareBinRateAtE");
+  fvFlareBinCopyArray(&dest[iBody].daFlareBinEnergyXUVAtE,
+                      src[iBody].daFlareBinEnergyXUVAtE,
+                      dest[iBody].iFlareBinNEnergy, "daFlareBinEnergyXUVAtE");
+  fvFlareBinCopyArray(&dest[iBody].daFlareBinAmpLumAtE,
+                      src[iBody].daFlareBinAmpLumAtE,
+                      dest[iBody].iFlareBinNEnergy, "daFlareBinAmpLumAtE");
+  fvFlareBinCopyArray(&dest[iBody].daFlareBinOverlapWeightAtE,
+                      src[iBody].daFlareBinOverlapWeightAtE,
+                      dest[iBody].iFlareBinNEnergy,
+                      "daFlareBinOverlapWeightAtE");
 }
 
 static void fvFlareBinOptionError(CONTROL *control, FILES *files, OPTIONS *options,
@@ -233,7 +260,12 @@ static int fbReadFlareBinDouble(CONTROL *control, FILES *files,
   if (lTmp >= 0) {
     NotPrimaryInput(iFile, options->cName, files->Infile[iFile].cIn, lTmp,
                     control->Io.iVerbose);
-    *pdValue = dTmp;
+    if (dTmp < 0 && options->bNeg) {
+      *pdValue = dTmp * dNegativeDouble(*options, files->Infile[iFile].cIn,
+                                        control->Io.iVerbose);
+    } else {
+      *pdValue = dTmp;
+    }
     UpdateFoundOption(&files->Infile[iFile], options, lTmp, iFile);
     return 1;
   }
@@ -364,11 +396,14 @@ void ReadFlareBinNormMode(BODY *body, CONTROL *control, FILES *files,
       body[iBody].iFlareBinNormMode = FLAREBIN_NORM_FROM_FFD;
     } else if (strstr(cLow, "flarepower") != NULL || strstr(cLow, "fraction") != NULL) {
       body[iBody].iFlareBinNormMode = FLAREBIN_NORM_FROM_FLAREPOWER_FRACTION;
+    } else if (strstr(cLow, "davenport") != NULL ||
+               strstr(cLow, "2019") != NULL) {
+      body[iBody].iFlareBinNormMode = FLAREBIN_NORM_DAVENPORT2019;
     } else if (strstr(cLow, "rate") != NULL) {
       body[iBody].iFlareBinNormMode = FLAREBIN_NORM_FROM_RATE_AT_E0;
     } else {
       fvFlareBinOptionError(control, files, options, iFile, lTmp,
-                            "must be NORM_FROM_FFD, NORM_FROM_FLAREPOWER_FRACTION, or NORM_FROM_RATE_AT_E0.");
+                            "must be NORM_FROM_FFD, NORM_FROM_FLAREPOWER_FRACTION, NORM_FROM_RATE_AT_E0, or NORM_DAVENPORT2019.");
     }
     UpdateFoundOption(&files->Infile[iFile], options, lTmp, iFile);
   } else if (iFile > 0) {
@@ -715,7 +750,7 @@ void InitializeOptionsFlareBin(OPTIONS *options, fnReadOption fnRead[]) {
   fvFormattedString(&options[OPT_FLAREBINNORMMODE].cDescr, "Flarebin normalization mode");
   fvFormattedString(&options[OPT_FLAREBINNORMMODE].cDefault, "NORM_FROM_FFD");
   fvFormattedString(&options[OPT_FLAREBINNORMMODE].cValues,
-                    "NORM_FROM_FFD NORM_FROM_FLAREPOWER_FRACTION NORM_FROM_RATE_AT_E0");
+                    "NORM_FROM_FFD NORM_FROM_FLAREPOWER_FRACTION NORM_FROM_RATE_AT_E0 NORM_DAVENPORT2019");
   fvFormattedString(&options[OPT_FLAREBINNORMMODE].cDimension, "none");
   options[OPT_FLAREBINNORMMODE].dDefault   = FLAREBIN_NORM_FROM_FFD;
   options[OPT_FLAREBINNORMMODE].iType      = 3;
@@ -750,8 +785,11 @@ void InitializeOptionsFlareBin(OPTIONS *options, fnReadOption fnRead[]) {
   fvFormattedString(&options[OPT_FLAREBINEMIN].cName, "dFlareBinEmin");
   fvFormattedString(&options[OPT_FLAREBINEMIN].cDescr, "Minimum flare energy");
   fvFormattedString(&options[OPT_FLAREBINEMIN].cDefault, "0");
+  fvFormattedString(&options[OPT_FLAREBINEMIN].cNeg, "ergs");
   fvFormattedString(&options[OPT_FLAREBINEMIN].cDimension, "energy");
   options[OPT_FLAREBINEMIN].dDefault   = 0;
+  options[OPT_FLAREBINEMIN].bNeg       = 1;
+  options[OPT_FLAREBINEMIN].dNeg       = 1e-7;
   options[OPT_FLAREBINEMIN].iType      = 2;
   options[OPT_FLAREBINEMIN].bMultiFile = 1;
   options[OPT_FLAREBINEMIN].iModuleBit = FLAREBIN;
@@ -761,8 +799,11 @@ void InitializeOptionsFlareBin(OPTIONS *options, fnReadOption fnRead[]) {
   fvFormattedString(&options[OPT_FLAREBINEMAX].cName, "dFlareBinEmax");
   fvFormattedString(&options[OPT_FLAREBINEMAX].cDescr, "Maximum flare energy");
   fvFormattedString(&options[OPT_FLAREBINEMAX].cDefault, "0");
+  fvFormattedString(&options[OPT_FLAREBINEMAX].cNeg, "ergs");
   fvFormattedString(&options[OPT_FLAREBINEMAX].cDimension, "energy");
   options[OPT_FLAREBINEMAX].dDefault   = 0;
+  options[OPT_FLAREBINEMAX].bNeg       = 1;
+  options[OPT_FLAREBINEMAX].dNeg       = 1e-7;
   options[OPT_FLAREBINEMAX].iType      = 2;
   options[OPT_FLAREBINEMAX].bMultiFile = 1;
   options[OPT_FLAREBINEMAX].iModuleBit = FLAREBIN;
@@ -773,8 +814,11 @@ void InitializeOptionsFlareBin(OPTIONS *options, fnReadOption fnRead[]) {
   fvFormattedString(&options[OPT_FLAREBINESTOCHMIN].cDescr,
                     "Minimum stochastic flare energy");
   fvFormattedString(&options[OPT_FLAREBINESTOCHMIN].cDefault, "0");
+  fvFormattedString(&options[OPT_FLAREBINESTOCHMIN].cNeg, "ergs");
   fvFormattedString(&options[OPT_FLAREBINESTOCHMIN].cDimension, "energy");
   options[OPT_FLAREBINESTOCHMIN].dDefault   = 0;
+  options[OPT_FLAREBINESTOCHMIN].bNeg       = 1;
+  options[OPT_FLAREBINESTOCHMIN].dNeg       = 1e-7;
   options[OPT_FLAREBINESTOCHMIN].iType      = 2;
   options[OPT_FLAREBINESTOCHMIN].bMultiFile = 1;
   options[OPT_FLAREBINESTOCHMIN].iModuleBit = FLAREBIN;
@@ -850,8 +894,11 @@ void InitializeOptionsFlareBin(OPTIONS *options, fnReadOption fnRead[]) {
   fvFormattedString(&options[OPT_FLAREBINRATETOT].cName, "dFlareBinRateTot");
   fvFormattedString(&options[OPT_FLAREBINRATETOT].cDescr, "Total flare rate");
   fvFormattedString(&options[OPT_FLAREBINRATETOT].cDefault, "0");
+  fvFormattedString(&options[OPT_FLAREBINRATETOT].cNeg, "/day");
   fvFormattedString(&options[OPT_FLAREBINRATETOT].cDimension, "1/time");
   options[OPT_FLAREBINRATETOT].dDefault   = 0;
+  options[OPT_FLAREBINRATETOT].bNeg       = 1;
+  options[OPT_FLAREBINRATETOT].dNeg       = 1.0 / DAYSEC;
   options[OPT_FLAREBINRATETOT].iType      = 2;
   options[OPT_FLAREBINRATETOT].bMultiFile = 1;
   options[OPT_FLAREBINRATETOT].iModuleBit = FLAREBIN;
@@ -861,8 +908,11 @@ void InitializeOptionsFlareBin(OPTIONS *options, fnReadOption fnRead[]) {
   fvFormattedString(&options[OPT_FLAREBINTAU0].cName, "dFlareBinTau0");
   fvFormattedString(&options[OPT_FLAREBINTAU0].cDescr, "Duration scaling tau0");
   fvFormattedString(&options[OPT_FLAREBINTAU0].cDefault, "0");
+  fvFormattedString(&options[OPT_FLAREBINTAU0].cNeg, "days");
   fvFormattedString(&options[OPT_FLAREBINTAU0].cDimension, "time");
   options[OPT_FLAREBINTAU0].dDefault   = 0;
+  options[OPT_FLAREBINTAU0].bNeg       = 1;
+  options[OPT_FLAREBINTAU0].dNeg       = DAYSEC;
   options[OPT_FLAREBINTAU0].iType      = 2;
   options[OPT_FLAREBINTAU0].bMultiFile = 1;
   options[OPT_FLAREBINTAU0].iModuleBit = FLAREBIN;
@@ -872,8 +922,11 @@ void InitializeOptionsFlareBin(OPTIONS *options, fnReadOption fnRead[]) {
   fvFormattedString(&options[OPT_FLAREBINDURE0].cName, "dFlareBinDurE0");
   fvFormattedString(&options[OPT_FLAREBINDURE0].cDescr, "Duration scaling E0");
   fvFormattedString(&options[OPT_FLAREBINDURE0].cDefault, "1");
+  fvFormattedString(&options[OPT_FLAREBINDURE0].cNeg, "ergs");
   fvFormattedString(&options[OPT_FLAREBINDURE0].cDimension, "energy");
   options[OPT_FLAREBINDURE0].dDefault   = 1;
+  options[OPT_FLAREBINDURE0].bNeg       = 1;
+  options[OPT_FLAREBINDURE0].dNeg       = 1e-7;
   options[OPT_FLAREBINDURE0].iType      = 2;
   options[OPT_FLAREBINDURE0].bMultiFile = 1;
   options[OPT_FLAREBINDURE0].iModuleBit = FLAREBIN;
@@ -1179,9 +1232,15 @@ void InitializeBodyFlareBin(BODY *body, CONTROL *control, UPDATE *update,
   body[iBody].dFlareBinLQ                = 0;
   body[iBody].dFlareBinPStoch            = 0;
   body[iBody].dFlareBinMu                = 0;
+  body[iBody].dFlareBinDavenportA        = FLAREBIN_OUTPUT_SENTINEL_DISABLED;
+  body[iBody].dFlareBinDavenportB        = FLAREBIN_OUTPUT_SENTINEL_DISABLED;
   body[iBody].dFlareBinLastPrecomputeAge = -1;
   body[iBody].iFlareBinNEnergy           = 0;
   body[iBody].iFlareBinNPhase            = 0;
+  body[iBody].daFlareBinRateAtE          = NULL;
+  body[iBody].daFlareBinEnergyXUVAtE     = NULL;
+  body[iBody].daFlareBinAmpLumAtE        = NULL;
+  body[iBody].daFlareBinOverlapWeightAtE = NULL;
   body[iBody].daFlareBinQuadU            = NULL;
   body[iBody].daFlareBinQuadWU           = NULL;
   body[iBody].daFlareBinQuadE            = NULL;
@@ -1221,6 +1280,14 @@ void InitializeBodyFlareBin(BODY *body, CONTROL *control, UPDATE *update,
         fdaFlareBinMallocArray(iNE, "daFlareBinQuadE");
   body[iBody].daFlareBinQuadWE =
         fdaFlareBinMallocArray(iNE, "daFlareBinQuadWE");
+  body[iBody].daFlareBinRateAtE =
+        fdaFlareBinMallocArray(iNE, "daFlareBinRateAtE");
+  body[iBody].daFlareBinEnergyXUVAtE =
+        fdaFlareBinMallocArray(iNE, "daFlareBinEnergyXUVAtE");
+  body[iBody].daFlareBinAmpLumAtE =
+        fdaFlareBinMallocArray(iNE, "daFlareBinAmpLumAtE");
+  body[iBody].daFlareBinOverlapWeightAtE =
+        fdaFlareBinMallocArray(iNE, "daFlareBinOverlapWeightAtE");
 
   body[iBody].daFlareBinQuadX =
         fdaFlareBinMallocArray(iNX, "daFlareBinQuadX");
@@ -1320,6 +1387,14 @@ void InitializeUpdateTmpBodyFlareBin(BODY *body, CONTROL *control, UPDATE *updat
 
   tmpBody->iFlareBinNEnergy = iNE;
   tmpBody->iFlareBinNPhase  = iNX;
+  tmpBody->daFlareBinRateAtE =
+      fdaFlareBinMallocArray(iNE, "tmp daFlareBinRateAtE");
+  tmpBody->daFlareBinEnergyXUVAtE =
+      fdaFlareBinMallocArray(iNE, "tmp daFlareBinEnergyXUVAtE");
+  tmpBody->daFlareBinAmpLumAtE =
+      fdaFlareBinMallocArray(iNE, "tmp daFlareBinAmpLumAtE");
+  tmpBody->daFlareBinOverlapWeightAtE =
+      fdaFlareBinMallocArray(iNE, "tmp daFlareBinOverlapWeightAtE");
   tmpBody->daFlareBinQuadU  = fdaFlareBinMallocArray(iNE, "tmp daFlareBinQuadU");
   tmpBody->daFlareBinQuadWU =
       fdaFlareBinMallocArray(iNE, "tmp daFlareBinQuadWU");
@@ -1505,6 +1580,30 @@ static void WriteFlareBinITemplate(BODY *body, CONTROL *control, OUTPUT *output,
   fvFormattedString(cUnit, "");
 }
 
+static void WriteFlareBinDavenportA(BODY *body, CONTROL *control, OUTPUT *output,
+                                    SYSTEM *system, UNITS *units, UPDATE *update,
+                                    int iBody, double *dTmp, char **cUnit) {
+  (void)control;
+  (void)output;
+  (void)system;
+  (void)units;
+  (void)update;
+  *dTmp = body[iBody].dFlareBinDavenportA;
+  fvFormattedString(cUnit, "");
+}
+
+static void WriteFlareBinDavenportB(BODY *body, CONTROL *control, OUTPUT *output,
+                                    SYSTEM *system, UNITS *units, UPDATE *update,
+                                    int iBody, double *dTmp, char **cUnit) {
+  (void)control;
+  (void)output;
+  (void)system;
+  (void)units;
+  (void)update;
+  *dTmp = body[iBody].dFlareBinDavenportB;
+  fvFormattedString(cUnit, "");
+}
+
 static void WriteFXUVMeanFlareBin(BODY *body, CONTROL *control, OUTPUT *output,
                                   SYSTEM *system, UNITS *units, UPDATE *update,
                                   int iBody, double *dTmp, char **cUnit) {
@@ -1672,6 +1771,22 @@ void InitializeOutputFlareBin(OUTPUT *output, fnWriteOutput fnWrite[]) {
   output[OUT_FLAREBINITEMPLATE].iNum       = 1;
   output[OUT_FLAREBINITEMPLATE].iModuleBit = FLAREBIN;
   fnWrite[OUT_FLAREBINITEMPLATE]           = &WriteFlareBinITemplate;
+
+  fvFormattedString(&output[OUT_FLAREBINDAVENPORTA].cName, "FlareBinDavenportA");
+  fvFormattedString(&output[OUT_FLAREBINDAVENPORTA].cDescr,
+                    "Instantaneous Davenport cumulative FFD slope a(t)");
+  output[OUT_FLAREBINDAVENPORTA].bNeg       = 0;
+  output[OUT_FLAREBINDAVENPORTA].iNum       = 1;
+  output[OUT_FLAREBINDAVENPORTA].iModuleBit = FLAREBIN;
+  fnWrite[OUT_FLAREBINDAVENPORTA]           = &WriteFlareBinDavenportA;
+
+  fvFormattedString(&output[OUT_FLAREBINDAVENPORTB].cName, "FlareBinDavenportB");
+  fvFormattedString(&output[OUT_FLAREBINDAVENPORTB].cDescr,
+                    "Instantaneous Davenport cumulative FFD intercept b(t)");
+  output[OUT_FLAREBINDAVENPORTB].bNeg       = 0;
+  output[OUT_FLAREBINDAVENPORTB].iNum       = 1;
+  output[OUT_FLAREBINDAVENPORTB].iModuleBit = FLAREBIN;
+  fnWrite[OUT_FLAREBINDAVENPORTB]           = &WriteFlareBinDavenportB;
 
   fvFormattedString(&output[OUT_FLAREBINFXUVMEAN].cName, "FXUVMean");
   fvFormattedString(&output[OUT_FLAREBINFXUVMEAN].cDescr,

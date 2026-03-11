@@ -171,6 +171,28 @@ static double fdFlareBinIdentityCallback(double dFXUV, void *pContext) {
   return dFXUV;
 }
 
+static ATMESC_RHS fsAtmEscRhsZero(void) {
+  ATMESC_RHS rhs;
+
+  rhs.dSurfaceWaterMassDt        = 0;
+  rhs.dOxygenMassDt              = 0;
+  rhs.dOxygenMantleMassDt        = 0;
+  rhs.dEnvelopeMassDt            = 0;
+  rhs.dEnvelopeMassDtBondiLimited = 0;
+  rhs.dEnvelopeMassDtRRLimited   = 0;
+  return rhs;
+}
+
+static void fvAtmEscRhsAccumulate(ATMESC_RHS *dest, const ATMESC_RHS *src,
+                                  double dScale) {
+  dest->dSurfaceWaterMassDt += dScale * src->dSurfaceWaterMassDt;
+  dest->dOxygenMassDt += dScale * src->dOxygenMassDt;
+  dest->dOxygenMantleMassDt += dScale * src->dOxygenMantleMassDt;
+  dest->dEnvelopeMassDt += dScale * src->dEnvelopeMassDt;
+  dest->dEnvelopeMassDtBondiLimited += dScale * src->dEnvelopeMassDtBondiLimited;
+  dest->dEnvelopeMassDtRRLimited += dScale * src->dEnvelopeMassDtRRLimited;
+}
+
 #ifdef DEBUG
 static void fvFlareBinEffAvgDebugChecks(int iStar, double dMu, double dExpMinusMu,
                                         int iNMax) {
@@ -294,17 +316,33 @@ void fvFlareBinPrecompute(BODY *body, SYSTEM *system, int iStar,
     exit(EXIT_FAILURE);
   }
 
-  fvFlareBinNormalizeFfd(body, iStar);
+  fvFlareBinNormalizeFfd(body, iStar, dTimeEval);
 
   dPStoch = 0;
   dMu     = 0;
   for (i = 0; i < iNE; i++) {
     double dE  = body[iStar].daFlareBinQuadE[i];
     double dWE = body[iStar].daFlareBinQuadWE[i];
+    double dRate = fdFlareBinRateDensity(body, iStar, dE, dTimeEval);
+    double dTau  = fdFlareBinDuration(body, iStar, dE);
+    double dEXUV = fdFlareBinEnergyToXUV(body, iStar, dE);
+    double dOverlapWeight = 0;
+    double dAmpLum        = 0;
 
-    dPStoch += dWE * fdFlareBinPowerIntegrand(body, iStar, dE, dTimeEval);
-    dMu += dWE *
-           fdFlareBinOverlapSupportIntegrand(body, iStar, dE, dTimeEval);
+    if (dRate > 0 && dTau > 0 && dWE != 0) {
+      dOverlapWeight = dWE * dRate * dTau;
+      if (body[iStar].dFlareBinITpl > 0) {
+        dAmpLum = dEXUV / (dTau * body[iStar].dFlareBinITpl);
+      }
+    }
+
+    body[iStar].daFlareBinRateAtE[i]          = dRate;
+    body[iStar].daFlareBinEnergyXUVAtE[i]     = dEXUV;
+    body[iStar].daFlareBinAmpLumAtE[i]        = dAmpLum;
+    body[iStar].daFlareBinOverlapWeightAtE[i] = dOverlapWeight;
+
+    dPStoch += dWE * dRate * dEXUV;
+    dMu += dOverlapWeight * body[iStar].dFlareBinDeltaX;
   }
 
   dLbar = body[iStar].dLXUV;
@@ -394,7 +432,8 @@ double fdFlareBinExpectFunction(BODY *body, SYSTEM *system, int iStar, int iPlan
   double dDeltaX, dInvDeltaX, dInvDeltaX2, dITpl;
   double dTimeEval;
   int iNMax;
-  const double *daE, *daWE, *daWX, *daTplAtX;
+  const double *daE, *daWX, *daTplAtX;
+  const double *daAmpLumAtE, *daOverlapWeightAtE;
 
   if (fnG == NULL) {
     fprintf(stderr, "ERROR: FLAREBIN expectation callback is NULL.\n");
@@ -412,7 +451,9 @@ double fdFlareBinExpectFunction(BODY *body, SYSTEM *system, int iStar, int iPlan
   iNX = body[iStar].iFlareBinNPhase;
   if (iNE <= 0 || iNX <= 0 || body[iStar].daFlareBinQuadE == NULL ||
       body[iStar].daFlareBinQuadWE == NULL || body[iStar].daFlareBinQuadWX == NULL ||
-      body[iStar].daFlareBinTplAtX == NULL) {
+      body[iStar].daFlareBinTplAtX == NULL ||
+      body[iStar].daFlareBinAmpLumAtE == NULL ||
+      body[iStar].daFlareBinOverlapWeightAtE == NULL) {
     fprintf(stderr,
             "ERROR: FLAREBIN expectation cache missing on body %d.\n",
             iStar);
@@ -470,24 +511,22 @@ double fdFlareBinExpectFunction(BODY *body, SYSTEM *system, int iStar, int iPlan
   dC1Sum     = 0;
   dC2        = 0;
   daE        = body[iStar].daFlareBinQuadE;
-  daWE       = body[iStar].daFlareBinQuadWE;
   daWX       = body[iStar].daFlareBinQuadWX;
   daTplAtX   = body[iStar].daFlareBinTplAtX;
+  daAmpLumAtE = body[iStar].daFlareBinAmpLumAtE;
+  daOverlapWeightAtE = body[iStar].daFlareBinOverlapWeightAtE;
 
   for (iE = 0; iE < iNE; iE++) {
-    double dE       = daE[iE];
-    double dWE      = daWE[iE];
-    double dRate    = fdFlareBinRateDensity(body, iStar, dE, dTimeEval);
-    double dTau     = fdFlareBinDuration(body, iStar, dE);
     double dAmpLum;
     double dAmpFluxScale;
     double dInner = 0;
+    double dOverlapWeight = daOverlapWeightAtE[iE];
 
-    if (dRate <= 0 || dTau <= 0 || dWE == 0) {
+    if (dOverlapWeight <= 0) {
       continue;
     }
 
-    dAmpLum = fdFlareBinEnergyToXUV(body, iStar, dE) / (dTau * dITpl);
+    dAmpLum = daAmpLumAtE[iE];
     dAmpFluxScale = dFXUVMean * dAmpLum * dInvLbar;
 
     for (iX = 0; iX < iNX; iX++) {
@@ -497,7 +536,7 @@ double fdFlareBinExpectFunction(BODY *body, SYSTEM *system, int iStar, int iPlan
     }
 
     dInner *= dInvDeltaX;
-    dC1Sum += dWE * dRate * dTau * dInner;
+    dC1Sum += dOverlapWeight * dInner;
   }
 
   dC1 = dExpMinusMu * dC1Sum;
@@ -509,39 +548,30 @@ double fdFlareBinExpectFunction(BODY *body, SYSTEM *system, int iStar, int iPlan
      */
     dC2Sum = 0;
     for (iE1 = 0; iE1 < iNE; iE1++) {
-      double dE1      = daE[iE1];
-      double dWE1     = daWE[iE1];
-      double dRate1   = fdFlareBinRateDensity(body, iStar, dE1, dTimeEval);
-      double dTau1    = fdFlareBinDuration(body, iStar, dE1);
       double dAmpLum1;
       double dAmpFluxScale1;
-      double dEWeight1;
+      double dEWeight1 = daOverlapWeightAtE[iE1];
 
-      if (dRate1 <= 0 || dTau1 <= 0 || dWE1 == 0) {
+      if (dEWeight1 <= 0) {
         continue;
       }
 
-      dAmpLum1      = fdFlareBinEnergyToXUV(body, iStar, dE1) / (dTau1 * dITpl);
+      dAmpLum1      = daAmpLumAtE[iE1];
       dAmpFluxScale1 = dFXUVMean * dAmpLum1 * dInvLbar;
-      dEWeight1     = dWE1 * dRate1 * dTau1;
 
-      for (iE2 = 0; iE2 < iNE; iE2++) {
-        double dE2      = daE[iE2];
-        double dWE2     = daWE[iE2];
-        double dRate2   = fdFlareBinRateDensity(body, iStar, dE2, dTimeEval);
-        double dTau2    = fdFlareBinDuration(body, iStar, dE2);
+      for (iE2 = iE1; iE2 < iNE; iE2++) {
         double dAmpLum2;
         double dAmpFluxScale2;
-        double dEWeight2;
+        double dEWeight2 = daOverlapWeightAtE[iE2];
         double dInner2 = 0;
+        double dPairFactor = (iE1 == iE2) ? 1.0 : 2.0;
 
-        if (dRate2 <= 0 || dTau2 <= 0 || dWE2 == 0) {
+        if (dEWeight2 <= 0) {
           continue;
         }
 
-        dAmpLum2      = fdFlareBinEnergyToXUV(body, iStar, dE2) / (dTau2 * dITpl);
+        dAmpLum2      = daAmpLumAtE[iE2];
         dAmpFluxScale2 = dFXUVMean * dAmpLum2 * dInvLbar;
-        dEWeight2     = dWE2 * dRate2 * dTau2;
 
         for (iX1 = 0; iX1 < iNX; iX1++) {
           double dWX1      = daWX[iX1];
@@ -555,7 +585,7 @@ double fdFlareBinExpectFunction(BODY *body, SYSTEM *system, int iStar, int iPlan
         }
 
         dInner2 *= dInvDeltaX2;
-        dC2Sum += dEWeight1 * dEWeight2 * dInner2;
+        dC2Sum += dPairFactor * dEWeight1 * dEWeight2 * dInner2;
       }
     }
 
@@ -567,6 +597,153 @@ double fdFlareBinExpectFunction(BODY *body, SYSTEM *system, int iStar, int iPlan
 #endif
 
   return dC0 + dC1 + dC2;
+}
+
+ATMESC_RHS fsFlareBinExpectAtmEscRhs(BODY *body, SYSTEM *system, int iStar,
+                                     int iPlanet) {
+  int iE, iX, iE1, iE2, iX1, iX2;
+  int iNE, iNX;
+  double dMu, dExpMinusMu;
+  double dLbar, dLq, dFXUVMean, dInvLbar;
+  double dFq;
+  double dDeltaX, dInvDeltaX, dInvDeltaX2, dITpl;
+  int iNMax;
+  const double *daWX, *daTplAtX;
+  const double *daAmpLumAtE, *daOverlapWeightAtE;
+  ATMESC_RHS rhsTotal;
+
+  if (!body[iStar].bFlareBin) {
+    return AtmEscRhsGivenFXUV(body, system, iPlanet,
+                              fdFlareBinMeanFXUV(body, system, iStar, iPlanet));
+  }
+
+  fvFlareBinPrecompute(body, system, iStar, body[iStar].dAge);
+
+  iNE = body[iStar].iFlareBinNEnergy;
+  iNX = body[iStar].iFlareBinNPhase;
+  if (iNE <= 0 || iNX <= 0 || body[iStar].daFlareBinQuadWX == NULL ||
+      body[iStar].daFlareBinTplAtX == NULL ||
+      body[iStar].daFlareBinAmpLumAtE == NULL ||
+      body[iStar].daFlareBinOverlapWeightAtE == NULL) {
+    fprintf(stderr,
+            "ERROR: FLAREBIN ATMESC expectation cache missing on body %d.\n",
+            iStar);
+    exit(EXIT_FAILURE);
+  }
+
+  dMu = body[iStar].dFlareBinMu;
+  if (dMu < 0 && fabs(dMu) <= FLAREBIN_EFFAVG_DIAG_TOL) {
+    dMu = 0;
+  }
+  if (dMu < 0) {
+    fprintf(stderr,
+            "ERROR: FLAREBIN invalid mu on body %d: %.16e.\n",
+            iStar, dMu);
+    exit(EXIT_FAILURE);
+  }
+
+  dExpMinusMu = exp(-dMu);
+  dLbar       = body[iStar].dLXUV;
+  dLq         = body[iStar].dFlareBinLQ;
+  dFXUVMean   = fdFlareBinMeanFXUV(body, system, iStar, iPlanet);
+  dInvLbar    = (dLbar > 0) ? 1.0 / dLbar : 0;
+  dFq         = dFXUVMean * dLq * dInvLbar;
+  rhsTotal    = fsAtmEscRhsZero();
+  {
+    ATMESC_RHS rhsFq = AtmEscRhsGivenFXUV(body, system, iPlanet, dFq);
+    fvAtmEscRhsAccumulate(&rhsTotal, &rhsFq, dExpMinusMu);
+  }
+
+  iNMax = body[iStar].iFlareBinMaxOverlapN;
+  if (iNMax == FLAREBIN_OVERLAP_N1) {
+    fvFlareBinWarnOverlapTolN1(body, iStar, dMu);
+  }
+  if (iNMax <= FLAREBIN_OVERLAP_N0) {
+    return rhsTotal;
+  }
+
+  dDeltaX = body[iStar].dFlareBinDeltaX;
+  dITpl   = body[iStar].dFlareBinITpl;
+  if (dDeltaX <= 0 || dITpl <= 0) {
+    fprintf(stderr,
+            "ERROR: FLAREBIN invalid template normalization on body %d.\n",
+            iStar);
+    exit(EXIT_FAILURE);
+  }
+
+  dInvDeltaX = 1.0 / dDeltaX;
+  dInvDeltaX2 = dInvDeltaX * dInvDeltaX;
+  daWX = body[iStar].daFlareBinQuadWX;
+  daTplAtX = body[iStar].daFlareBinTplAtX;
+  daAmpLumAtE = body[iStar].daFlareBinAmpLumAtE;
+  daOverlapWeightAtE = body[iStar].daFlareBinOverlapWeightAtE;
+
+  for (iE = 0; iE < iNE; iE++) {
+    double dAmpFluxScale;
+    double dInnerScale;
+    ATMESC_RHS rhsInner;
+    double dOverlapWeight = daOverlapWeightAtE[iE];
+
+    if (dOverlapWeight <= 0) {
+      continue;
+    }
+
+    dAmpFluxScale = dFXUVMean * daAmpLumAtE[iE] * dInvLbar;
+    rhsInner      = fsAtmEscRhsZero();
+
+    for (iX = 0; iX < iNX; iX++) {
+      double dFXUV = dFq + dAmpFluxScale * daTplAtX[iX];
+      ATMESC_RHS rhsAtFXUV = AtmEscRhsGivenFXUV(body, system, iPlanet, dFXUV);
+      fvAtmEscRhsAccumulate(&rhsInner, &rhsAtFXUV, daWX[iX]);
+    }
+
+    dInnerScale = dExpMinusMu * dOverlapWeight * dInvDeltaX;
+    fvAtmEscRhsAccumulate(&rhsTotal, &rhsInner, dInnerScale);
+  }
+
+  if (iNMax >= FLAREBIN_OVERLAP_N2) {
+    for (iE1 = 0; iE1 < iNE; iE1++) {
+      double dEWeight1 = daOverlapWeightAtE[iE1];
+      double dAmpFluxScale1;
+
+      if (dEWeight1 <= 0) {
+        continue;
+      }
+
+      dAmpFluxScale1 = dFXUVMean * daAmpLumAtE[iE1] * dInvLbar;
+
+      for (iE2 = iE1; iE2 < iNE; iE2++) {
+        double dEWeight2 = daOverlapWeightAtE[iE2];
+        double dAmpFluxScale2;
+        double dPairFactor = (iE1 == iE2) ? 1.0 : 2.0;
+        ATMESC_RHS rhsInner2;
+
+        if (dEWeight2 <= 0) {
+          continue;
+        }
+
+        dAmpFluxScale2 = dFXUVMean * daAmpLumAtE[iE2] * dInvLbar;
+        rhsInner2      = fsAtmEscRhsZero();
+
+        for (iX1 = 0; iX1 < iNX; iX1++) {
+          double dFXUVBase = dFq + dAmpFluxScale1 * daTplAtX[iX1];
+
+          for (iX2 = 0; iX2 < iNX; iX2++) {
+            double dFXUV = dFXUVBase + dAmpFluxScale2 * daTplAtX[iX2];
+            ATMESC_RHS rhsAtFXUV = AtmEscRhsGivenFXUV(body, system, iPlanet, dFXUV);
+            fvAtmEscRhsAccumulate(&rhsInner2, &rhsAtFXUV,
+                                  daWX[iX1] * daWX[iX2]);
+          }
+        }
+
+        fvAtmEscRhsAccumulate(&rhsTotal, &rhsInner2,
+                              0.5 * dExpMinusMu * dPairFactor * dEWeight1 *
+                                  dEWeight2 * dInvDeltaX2);
+      }
+    }
+  }
+
+  return rhsTotal;
 }
 
 double fdFlareBinExpectAtmEscRhs(BODY *body, SYSTEM *system, int iStar,

@@ -171,7 +171,7 @@ Anchors found: `fdXUVFlux`, `fvCumulativeXUVFlux`.
   Band conversion `E_XUV(E_in)`.
 - `double fdFlareBinTemplateAmp(const BODY *body, int iStar, double dEin);`  
   Amplitude `A(E)=E_XUV/(tau*I_tpl)`.
-- `void fvFlareBinNormalizeFfd(BODY *body, int iStar);`  
+- `void fvFlareBinNormalizeFfd(BODY *body, int iStar, double dTimeEval);`  
   Apply normalization policy (including optional renormalization if configured).
 - `double fdFlareBinCheckFlarePower(const BODY *body, int iStar, double dTimeEval);`  
   Compute flare power for consistency checks vs STELLAR baseline.
@@ -204,4 +204,3 @@ Anchors found: `fdXUVFlux`, `fvCumulativeXUVFlux`.
 - No event queue, no `next flare` timestamp logic.
 - No random energy/event draws during ODE integration.
 - No per-flare logging/scheduling state.
-
